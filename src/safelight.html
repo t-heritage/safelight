@@ -48,6 +48,12 @@ button,input,select{font:inherit;color:inherit}
 .btn.ghost{background:transparent}
 .btn[aria-pressed="true"]{border-color:var(--safelight);color:#fff;background:var(--safelight-soft)}
 .btn:disabled{opacity:.45;cursor:default}
+.zoomgrp{display:inline-flex}
+.zoomgrp .btn{border-radius:0;margin-left:-1px}
+.zoomgrp .btn:first-child{border-radius:6px 0 0 6px;margin-left:0}
+.zoomgrp .btn:last-child{border-radius:0 6px 6px 0}
+#btnZoom{min-width:58px;font-family:var(--f-mono);font-size:11.5px;font-variant-numeric:tabular-nums}
+#zoomIn,#zoomOut{width:30px;padding:0;font-size:15px}
 .btn.small{height:26px;padding:0 9px;font-size:12px}
 .linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:12px}
 .linkbtn:hover{color:var(--fg)}
@@ -72,11 +78,21 @@ summary:hover{color:var(--fg)}
 .confirm{background:var(--panel-2);border:1px solid var(--safelight);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
 
 /* sliders */
-.sl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;row-gap:2px}
+.sl{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;row-gap:2px;column-gap:4px}
 .sl label{font-size:12.5px;color:#d3d1cd;cursor:default;user-select:none}
 .sl .val{font-family:var(--f-mono);font-size:11px;color:var(--muted);background:none;border:0;padding:0 2px;cursor:pointer;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
-.sl .val:hover{color:var(--fg)}
+.sl .rst{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:4px;background:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0}
+.sl .rst:hover{background:var(--panel-2);color:var(--fg)}
+.sl.is-default .rst{opacity:.25;cursor:default}
+.sl.is-default .rst:hover{background:none;color:var(--muted)}
+.scope{position:sticky;top:0;z-index:2;background:var(--panel);padding:12px 14px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+.scope>span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;font-variation-settings:"wdth" 85}
+.scope .seg label{min-width:0}
+.scope .seg span{padding:6px 4px;font-size:12px;white-space:nowrap}
+.scope.many{background:linear-gradient(var(--safelight-soft),var(--safelight-soft)),var(--panel)}
+.tag.many{background:var(--safelight);color:#1a0d09}
 .sl input{grid-column:1/-1}
+.sl .val{cursor:default}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;margin:0;cursor:pointer;--a:0%;--b:0%}
 input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--line) var(--a),#a9a6a1 var(--a),#a9a6a1 var(--b),var(--line) var(--b))}
 input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--line) var(--a),#a9a6a1 var(--a),#a9a6a1 var(--b),var(--line) var(--b))}
@@ -242,7 +258,11 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
       <label class="btn" for="fileIn">Import photos</label>
       <input type="file" id="fileIn" multiple accept="image/*" hidden>
       <button class="btn ghost" id="btnBefore" type="button" title="Hold to see the original. Shortcut: hold \">Hold for before</button>
-      <button class="btn ghost" id="btnZoom" type="button" aria-pressed="false" title="Shortcut: Z">100%</button>
+      <div class="zoomgrp" role="group" aria-label="Zoom">
+        <button class="btn ghost" id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out ( − )">−</button>
+        <button class="btn ghost" id="btnZoom" type="button" title="Switch between fit and 100% (Z). Pinch or Ctrl/Cmd-scroll on the photo to zoom.">Fit</button>
+        <button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in ( + )">+</button>
+      </div>
       <button class="btn primary" id="btnExport" type="button">Export…</button>
     </div>
   </header>
@@ -252,7 +272,6 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
       <summary>Library</summary>
       <div class="sec">
         <p class="hint" id="selInfo">Loading…</p>
-        <label class="check"><input type="checkbox" id="autoSync"> <span>Sync edits across the selected photos</span></label>
         <div class="btn-grid">
           <button class="btn small" id="btnSelAll" type="button">Select all</button>
           <button class="btn small" id="btnSelOne" type="button">Select one</button>
@@ -278,6 +297,8 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
         <p class="hint" id="presetHint">Applies to the selected photos.</p>
         <div class="presets" id="presetList"></div>
         <div class="add-row"><input type="text" id="presetName" placeholder="Name this look" maxlength="40" aria-label="Preset name"><button class="btn small" id="presetSave" type="button">Save</button></div>
+        <p class="fineprint">Your presets are kept in this browser. Export them to back up or move to another computer.</p>
+        <div class="btn-row"><button class="btn small" id="presetExport" type="button">Export presets</button><label class="btn small" for="presetImport">Import presets</label><input type="file" id="presetImport" accept=".json,application/json" hidden></div>
       </div>
     </details>
     <details open>
@@ -326,10 +347,18 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
   <section class="film" aria-label="Filmstrip"><div class="film-track" id="filmTrack"></div></section>
 
   <aside class="panel right" aria-label="Develop">
+    <div class="scope" id="scopeBar" role="radiogroup" aria-label="Edits apply to">
+      <span>Edits apply to</span>
+      <div class="seg">
+        <label><input type="radio" name="editScope" value="one"><span>This photo</span></label>
+        <label><input type="radio" name="editScope" value="selected"><span id="scopeSelLabel">Selected</span></label>
+        <label><input type="radio" name="editScope" value="all"><span id="scopeAllLabel">All</span></label>
+      </div>
+    </div>
     <div id="groups"></div>
     <div class="panel-foot">
       <button class="btn small" id="btnReset" type="button">Reset photo</button>
-      <button class="btn small" id="btnCube" type="button" title="Colour and tone only. Grain, halation and vignette can't live in a LUT.">Save look as .cube</button>
+      <button class="btn small" id="btnCube" type="button" title="Colour and tone only. Grain, halation, dust, leaks and other texture can't live in a LUT.">Save look as .cube</button>
     </div>
   </aside>
 </div>
@@ -563,6 +592,14 @@ const GROUPS = [
     ['halHue', 'Colour', 0, 60, 1, 10, v => v < 14 ? 'red' : v < 34 ? 'red-orange' : 'orange'], ['bloom', 'Bloom', 0, 100, 1, 0]] },
   { id: 'grain', title: 'Grain', note: 'Grain only shows at its true size at 100%. Fit view softens it, as print would.', sliders: [
     ['grain', 'Amount', 0, 100, 1, 0], ['grainSize', 'Size', 0, 100, 1, 35], ['grainRough', 'Roughness', 0, 100, 1, 40]] },
+  { id: 'debris', title: 'Dust & scratches', shuffle: true, note: 'Specks, hairs and scratches on the film or scanner glass. White is how they look on a scanned negative; black is how they print.', sliders: [
+    ['dust', 'Dust', 0, 100, 1, 0], ['hairs', 'Hairs', 0, 100, 1, 0], ['scratches', 'Scratches', 0, 100, 1, 0],
+    ['dustTone', 'Tone', 0, 100, 1, 100, v => v <= 15 ? 'black' : v >= 85 ? 'white' : Math.round(v) + '%']] },
+  { id: 'leaks', title: 'Light leaks & chemistry', shuffle: true, note: 'Light getting into the camera, stains from processing, and the fog of old film.', sliders: [
+    ['leak', 'Light leak', 0, 100, 1, 0], ['leakSize', 'Leak size', 0, 100, 1, 45], ['leakHue', 'Leak colour', 0, 60, 1, 18, v => v < 14 ? 'red' : v < 34 ? 'red-orange' : 'orange'],
+    ['stains', 'Stains', 0, 100, 1, 0], ['fog', 'Fog', 0, 100, 1, 0]] },
+  { id: 'lens', title: 'Lens & frame', date: true, sliders: [
+    ['soften', 'Softness', 0, 100, 1, 0], ['aberration', 'Colour fringing', 0, 100, 1, 0], ['frameEdge', 'Frame edge', 0, 100, 1, 0], ['dateStamp', 'Date stamp', 0, 100, 1, 0]] },
   { id: 'vignette', title: 'Vignette', sliders: [
     ['vignette', 'Amount', -100, 100, 1, 0], ['vigMid', 'Midpoint', 0, 100, 1, 50], ['vigFeather', 'Feather', 0, 100, 1, 50]] },
 ];
@@ -570,6 +607,8 @@ const SLIDERS = {}; GROUPS.forEach(g => g.sliders.forEach(s => SLIDERS[s[0]] = s
 SLIDERS.strength = ['strength', 'Film strength', 0, 100, 1, 100, v => Math.round(v) + '%'];
 const DEFAULTS = { stock: 'none' };
 Object.values(SLIDERS).forEach(s => DEFAULTS[s[0]] = s[5]);
+DEFAULTS.texSeed = 1;
+DEFAULTS.dateText = (() => { const d = new Date(); return `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`; })();
 const isEdited = s => Object.keys(DEFAULTS).some(k => s[k] !== DEFAULTS[k]);
 
 const BUILTIN_PRESETS = [
@@ -589,7 +628,7 @@ const BRAND = [
 const state = {
   photos: [], activeId: null, selected: new Set(), anchorId: null,
   zoom: 'fit', pan: { x: 0.5, y: 0.5 }, before: false, picking: false,
-  autoSync: prefs.get('autoSync', false),
+  editScope: prefs.get('editScope', prefs.get('autoSync', false) ? 'selected' : 'one'),
   swatches: prefs.get('swatches', BRAND),
   userPresets: prefs.get('presets', []),
   showCmp: prefs.get('showCmp', true),
@@ -647,15 +686,83 @@ uniform float u_sat, u_vib, u_fade;
 uniform bool u_hasGlow; uniform float u_hal, u_bloom, u_glowScale; uniform vec3 u_halTint;
 uniform float u_grain, u_grainCell, u_grainRough, u_grainFoot, u_seed; uniform vec2 u_fullRes;
 uniform float u_vig, u_vigMid, u_vigFeather, u_dither;
+uniform sampler2D u_date;
+uniform float u_px, u_tseed, u_dust, u_hairs, u_scratch, u_dustTone, u_stains, u_fog, u_leak, u_leakSize, u_soft, u_ca, u_frame, u_dateAmt;
+uniform vec3 u_leakCol; uniform vec4 u_leakA, u_dateBox;
 float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
 float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.-2.*f);
   float a = hash12(i), b = hash12(i+vec2(1,0)), c = hash12(i+vec2(0,1)), d = hash12(i+vec2(1,1));
   return mix(mix(a,b,u.x), mix(c,d,u.x), u.y)*2.-1.; }
+// ---- film damage. Everything is measured in "q" units (1 = the image's short side), so it looks the same
+// at any preview size, zoom or export resolution; u_px is the size of one output pixel in those units.
+vec4 hash44(vec4 p4){ p4 = fract(p4*vec4(.1031,.1030,.0973,.1099)); p4 += dot(p4, p4.wzxy+33.33); return fract((p4.xxyz+p4.yzzw)*p4.zywx); }
+float sdSeg(vec2 p, vec2 a, vec2 b){ vec2 pa = p-a, ba = b-a; float h = clamp(dot(pa,ba)/dot(ba,ba), 0., 1.); return length(pa - ba*h); }
+float fbm(vec2 p){ float a = 0.5, t = 0.; for(int i=0;i<4;i++){ t += a*vnoise(p); p = p*2.03 + 7.1; a *= 0.5; } return t; }
+float specks(vec2 q, float C, float dens, float s0, float s1, float salt){
+  vec2 c = floor(q/C); float m = 0.;
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
+    vec2 id = c + vec2(i,j); vec4 h = hash44(vec4(id, u_tseed, salt));
+    if(h.x > dens) continue;
+    vec4 k = hash44(vec4(id, u_tseed, salt+1.));
+    vec2 d = q - (id + 0.1 + 0.8*h.yz)*C;
+    float size = mix(s0, s1, k.x*k.x*k.x), an = k.y*6.2832;
+    d = mat2(cos(an), -sin(an), sin(an), cos(an))*d; d.x /= mix(1., 2.4, k.z);
+    float th = atan(d.y, d.x), r = length(d) - size*(1. + 0.22*sin(th*floor(2. + k.z*4.) + k.w*40.) + 0.12*sin(th*7. + k.x*60.));
+    m = max(m, clamp(0.5 - r/u_px, 0., 1.)*min(1., 1.5*size/u_px)*mix(0.6, 1., k.w));
+  }
+  return m;
+}
+float hairs(vec2 q){
+  const float C = 0.32; vec2 c = floor(q/C); float m = 0.;
+  for(int j=-1;j<=1;j++) for(int i=-1;i<=1;i++){
+    vec2 id = c + vec2(i,j); vec4 h = hash44(vec4(id, u_tseed, 31.));
+    if(h.x > u_hairs*0.5) continue;
+    vec4 k = hash44(vec4(id, u_tseed, 32.));
+    vec2 p = (id + h.yz)*C; float a = h.w*6.2832, len = C*mix(0.2, 0.85, k.x)/6., bend = (k.y-0.5)*0.9, w = mix(0.0003, 0.0009, k.z);
+    for(int t=0;t<6;t++){
+      a += bend + (fract(k.w*float(t+3)*7.13)-0.5)*0.5;
+      vec2 n = p + vec2(cos(a), sin(a))*len;
+      m = max(m, clamp(0.5 - (sdSeg(q, p, n) - w)/u_px, 0., 1.)*min(1., 2.*w/u_px + 0.25));
+      p = n;
+    }
+  }
+  return m;
+}
+float scratches(vec2 q){   // they run along the film, which is the long side of the frame
+  bool land = u_fullRes.x >= u_fullRes.y;
+  float along = land ? q.x : q.y, across = land ? q.y : q.x;
+  const float C = 0.025; float c = floor(across/C), m = 0.;
+  for(int i=-1;i<=1;i++){
+    float id = c + float(i); vec4 h = hash44(vec4(id, 0.5, u_tseed, 47.));
+    if(h.x > u_scratch*0.3) continue;
+    vec4 k = hash44(vec4(id, 1.5, u_tseed, 48.));
+    float x0 = (id + h.y)*C + 0.0015*sin(along*(3. + k.x*8.) + k.y*20.);
+    float t0 = k.z < 0.5 ? -1. : k.z*1.2 - 0.3, t1 = t0 + mix(0.3, 2.5, k.w);
+    if(along < t0 || along > t1) continue;
+    float w = mix(0.00025, 0.0007, h.z), d = abs(across - x0) - w;
+    float dash = smoothstep(-0.2, 0.3, vnoise(vec2(along*25., id*3.1)));
+    m = max(m, clamp(0.5 - d/u_px, 0., 1.)*min(1., 2.*w/u_px + 0.2)*dash*mix(0.5, 1., h.w));
+  }
+  return m;
+}
+vec3 fetch(vec2 uv, float bias){
+  if(u_ca > 0.){ vec2 d = uv - 0.5; return vec3(texture(u_src, 0.5 + d*(1.+u_ca), bias).r, texture(u_src, uv, bias).g, texture(u_src, 0.5 + d*(1.-u_ca), bias).b); }
+  return texture(u_src, uv, bias).rgb;
+}
+vec3 srcSample(vec2 img){
+  if(u_soft <= 0.) return fetch(img, 0.);
+  float bias = max(0., log2(u_soft/u_px*0.5));
+  vec2 r = u_soft*min(u_fullRes.x, u_fullRes.y)/u_fullRes;
+  vec3 acc = fetch(img, bias)*2.; float w = 2.;
+  for(int i=0;i<8;i++){ float a = float(i)*0.785398 + 0.39; acc += fetch(img + vec2(cos(a), sin(a))*r, bias); w += 1.; }
+  return acc/w;
+}
 void main(){
   vec2 img = u_view.xy + vec2(v_uv.x, 1.0-v_uv.y)*u_view.zw;
   if(img.x<0.||img.y<0.||img.x>1.||img.y>1.){ o = vec4(u_bg,1.); return; }
-  vec3 src = texture(u_src, img).rgb;
-  if(u_bypass){ o = vec4(src,1.); return; }
+  if(u_bypass){ o = vec4(texture(u_src, img).rgb, 1.); return; }
+  vec3 src = srcSample(img);
+  vec2 Q = u_fullRes/min(u_fullRes.x, u_fullRes.y), q = img*Q;
   vec3 lin = toLin(src)*u_gain;
   if(u_vig != 0.){ float r = length((img-0.5)*2.0)*0.70710678; lin *= max(0., 1.0 + u_vig*smoothstep(u_vigMid, u_vigMid+u_vigFeather, r)); }
   if(u_hasGlow){
@@ -664,6 +771,17 @@ void main(){
     // Halation re-exposes the red layer from the film base, so it follows highlight energy, not the light's own colour.
     float Lc = dot(lin, LW), h = dot(g0*0.6 + g1*0.4, LW);
     lin += h*u_halTint*u_hal/(1.0 + Lc*3.0) + g1*u_bloom;
+  }
+  if(u_leak > 0.){   // light leaking in from one edge of the camera back
+    vec2 rel = q - u_leakA.xy, nrm = u_leakA.zw, tng = vec2(-nrm.y, nrm.x);
+    float depth = max(dot(rel, nrm), 0.), along = dot(rel, tng), S = u_leakSize;
+    float sh = exp(-depth/(S*0.45))*exp(-along*along/(S*S*0.9))*(0.55 + 0.9*(fbm(q*2.2 + u_tseed)*0.5 + 0.5));
+    sh += 0.5*exp(-depth/(S*0.2))*exp(-pow(along - S*0.7, 2.)/(S*S*0.12));
+    lin += mix(u_leakCol, vec3(1.0, 0.86, 0.62), smoothstep(0.4, 1.1, sh))*sh*u_leak*u_leak*5.0;
+  }
+  if(u_dateAmt > 0.){   // the orange LED date some compact cameras burned into the corner
+    vec2 uv = (q - u_dateBox.xy)/u_dateBox.zw;
+    if(uv.x >= 0. && uv.y >= 0. && uv.x <= 1. && uv.y <= 1.){ float a = texture(u_date, uv).r; lin += vec3(1.0, 0.38, 0.06)*a*a*u_dateAmt*3.0; }
   }
   vec3 e = toEnc(lin);
   { const float k = 0.98; vec3 t = max(e-k, 0.); e = min(e, vec3(k)) + (1.-k)*tanh(t/(1.-k)); }
@@ -678,6 +796,20 @@ void main(){
   float mx = max(e.r, max(e.g, e.b)), mn = min(e.r, min(e.g, e.b));
   e = L + (e-L)*max(0., 1. + u_sat + u_vib*(1.-smoothstep(0., 0.7, mx-mn)));
   e = mix(vec3(u_fade*0.12), vec3(1.-u_fade*0.05), e);
+  if(u_fog > 0.){ e += u_fog*0.22*vec3(0.62, 0.7, 0.6)*(1.-clamp(e,0.,1.))*(1.-clamp(e,0.,1.)); e = mix(e, 0.5 + (e-0.5)*0.88, u_fog); }
+  if(u_stains > 0.){   // processing stains and water marks: a tinted patch with a darker drying ring
+    float n = fbm(q*1.6 + u_tseed*0.73)*0.5 + 0.5, t = 1. - u_stains*0.35;
+    float body = smoothstep(t, t + 0.03, n), ring = exp(-pow((n - t)/0.008, 2.));
+    e *= mix(vec3(1.), vec3(0.95, 0.8, 0.52), body*0.6 + ring*0.9)*(1. - ring*0.12);
+  }
+  if(u_frame > 0.){   // the rough black edge of a filed-out negative carrier
+    vec2 c = Q*0.5, hb = c - u_frame*0.04; const float rad = 0.012;
+    vec2 dd = abs(q - c) - (hb - rad);
+    float sd = length(max(dd, 0.)) + min(max(dd.x, dd.y), 0.) - rad;
+    float along = abs(q.x - c.x)/Q.x > abs(q.y - c.y)/Q.y ? q.y : q.x;
+    sd += vnoise(vec2(along*90., 3.))*0.0012 + vnoise(vec2(along*14., 9.))*0.0025;
+    e = mix(e, vec3(0.015), clamp(0.5 + sd/u_px, 0., 1.));
+  }
   if(u_grain > 0.){
     vec2 p = img*u_fullRes/u_grainCell + u_seed*vec2(13.71, 71.37);
     float n = vnoise(p)*0.7 + vnoise(p*2.17+vec2(5.2,1.3))*0.45;
@@ -685,6 +817,13 @@ void main(){
     vec3 nc = vec3(n) + 0.22*vec3(vnoise(p*1.3+31.), vnoise(p*1.3+57.), vnoise(p*1.3+91.));
     float Lw = clamp(dot(clamp(e,0.,1.), LW), 0., 1.);
     e += nc*(0.3 + 2.8*Lw*(1.-Lw))*u_grain*0.16/max(1., u_grainFoot);
+  }
+  if(u_dust + u_hairs + u_scratch > 0.){   // debris on the film or scanner glass sits on top of everything
+    float m = 0.;
+    if(u_dust > 0.) m = max(specks(q, 0.03, u_dust*0.5, 0.0004, 0.003, 11.), specks(q, 0.18, u_dust*0.35, 0.002, 0.008, 21.));
+    if(u_hairs > 0.) m = max(m, hairs(q));
+    if(u_scratch > 0.) m = max(m, scratches(q));
+    e = mix(e, vec3(mix(0.02, 0.96, u_dustTone)), m*0.92);
   }
   e += (hash12(gl_FragCoord.xy + fract(u_seed*0.137)*97.) - 0.5)/255.*u_dither;
   o = vec4(clamp(e,0.,1.), 1.);
@@ -833,10 +972,47 @@ function computeGlow(o) {
   gl.bindTexture(gl.TEXTURE_2D, g.b2.t); gl.generateMipmap(gl.TEXTURE_2D);
   return g.b2.t;
 }
+// Where the light leak comes in: mostly the left or right edge of a landscape frame, where film canisters sit.
+function leakAnchor(seed, texSeed, Qx, Qy) {
+  const R = rng((seed * 7919 + texSeed * 104729) >>> 0), r = R(), land = Qx >= Qy, pos = 0.15 + 0.7 * R();
+  const side = land ? (r < 0.4 ? 0 : r < 0.8 ? 1 : r < 0.9 ? 2 : 3) : (r < 0.4 ? 2 : r < 0.8 ? 3 : r < 0.9 ? 0 : 1);
+  return [[0, pos * Qy, 1, 0], [Qx, pos * Qy, -1, 0], [pos * Qx, 0, 0, 1], [pos * Qx, Qy, 0, -1]][side];
+}
+// Seven-segment LED date, drawn once per text and kept as a texture.
+const dateCache = new Map();
+function dateTexture(text) {
+  text = String(text || '').slice(0, 14);
+  if (dateCache.has(text)) return dateCache.get(text);
+  const SEG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg', '-': 'g' };
+  const H = 96, CW = 52, T = 10, GAP = 16, chars = [...text];
+  const widthOf = ch => SEG[ch] ? CW + GAP : ch === ' ' ? CW * 0.55 : 20;
+  const W = Math.max(40, chars.reduce((n, ch) => n + widthOf(ch), 0)) + 48;
+  const c = document.createElement('canvas'); c.width = Math.ceil(W); c.height = H + 48;
+  const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+  const rects = { a: [T, 0, CW - 2 * T, T], b: [CW - T, T, T, H / 2 - 1.5 * T], c: [CW - T, H / 2 + T / 2, T, H / 2 - 1.5 * T], d: [T, H - T, CW - 2 * T, T], e: [0, H / 2 + T / 2, T, H / 2 - 1.5 * T], f: [0, T, T, H / 2 - 1.5 * T], g: [T, H / 2 - T / 2, CW - 2 * T, T] };
+  const paint = () => {
+    let px = 0;
+    for (const ch of chars) {
+      if (SEG[ch]) for (const sgm of SEG[ch]) { const [rx, ry, rw, rh] = rects[sgm]; x.fillRect(px + rx + 1, ry + 1, rw - 2, rh - 2); }
+      else if (ch === "'") x.fillRect(px + 4, 0, T, T * 2.2);
+      else if (ch === '.' || ch === ',') x.fillRect(px + 4, H - T, T, T);
+      else if (ch === ':') { x.fillRect(px + 4, H * 0.28, T, T); x.fillRect(px + 4, H * 0.66, T, T); }
+      px += widthOf(ch);
+    }
+  };
+  x.save(); x.translate(24 + H * 0.1, 24); x.transform(1, 0, -0.1, 1, 0, 0);
+  x.fillStyle = '#fff'; x.shadowColor = '#fff'; x.shadowBlur = 16; paint(); x.shadowBlur = 0; paint(); x.restore();
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.generateMipmap(gl.TEXTURE_2D); texParams(gl.TEXTURE_2D, true);
+  const out = { tex: t, aspect: c.width / c.height };
+  if (dateCache.size > 8) { for (const [k, v] of dateCache) { gl.deleteTexture(v.tex); dateCache.delete(k); break; } }
+  dateCache.set(text, out); return out;
+}
 /* o: {tex, texW, texH, fullW, fullH, s, seed, outW, outH, view:[x,y,w,h], fb, bypass, glowShort, dither} */
 function render(o) {
   const s = o.s, bypass = !!o.bypass;
   const glowTex = !bypass && (s.halation > 0 || s.bloom > 0) ? computeGlow(o) : null;
+  const date = !bypass && s.dateStamp > 0 ? dateTexture(s.dateText) : null;   // may create a texture, so before binding units
   gl.bindFramebuffer(gl.FRAMEBUFFER, o.fb || null); gl.viewport(0, 0, o.outW, o.outH);
   const u = PM.u; gl.useProgram(PM.p);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(u.u_src, 0);
@@ -858,6 +1034,18 @@ function render(o) {
   gl.uniform2f(u.u_fullRes, o.fullW, o.fullH);
   gl.uniform1f(u.u_vig, s.vignette / 100); gl.uniform1f(u.u_vigMid, 0.15 + 0.8 * s.vigMid / 100); gl.uniform1f(u.u_vigFeather, 0.05 + 0.9 * s.vigFeather / 100);
   gl.uniform1f(u.u_dither, o.dither === 0 ? 0 : 1);
+  const Qx = o.fullW / short, Qy = o.fullH / short;
+  gl.uniform1f(u.u_px, (o.fullW * o.view[2] / o.outW) / short);
+  gl.uniform1f(u.u_tseed, ((o.seed || 1) % 997) * 0.731 + (s.texSeed || 1) * 3.17);
+  gl.uniform1f(u.u_dust, s.dust / 100); gl.uniform1f(u.u_hairs, s.hairs / 100); gl.uniform1f(u.u_scratch, s.scratches / 100); gl.uniform1f(u.u_dustTone, s.dustTone / 100);
+  gl.uniform1f(u.u_stains, s.stains / 100); gl.uniform1f(u.u_fog, s.fog / 100);
+  gl.uniform1f(u.u_leak, s.leak / 100); gl.uniform1f(u.u_leakSize, 0.15 + 0.75 * s.leakSize / 100);
+  gl.uniform3f(u.u_leakCol, ...hsv2rgb(s.leakHue, 0.95, 1)); gl.uniform4f(u.u_leakA, ...leakAnchor(o.seed || 1, s.texSeed || 1, Qx, Qy));
+  gl.uniform1f(u.u_soft, s.soften / 100 * 0.004); gl.uniform1f(u.u_ca, s.aberration / 100 * 0.004);
+  gl.uniform1f(u.u_frame, s.frameEdge / 100);
+  gl.uniform1f(u.u_dateAmt, date ? s.dateStamp / 100 : 0);
+  if (date) { const hq = 0.055, wq = hq * date.aspect; gl.uniform4f(u.u_dateBox, Qx - 0.06 - wq, Qy - 0.06 - hq, wq, hq); }
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, date ? date.tex : DUMMY2D); gl.uniform1i(u.u_date, 3); gl.activeTexture(gl.TEXTURE0);
   draw();
 }
 function readRT(rt) { // returns top-down RGBA
@@ -987,9 +1175,11 @@ function resizeCanvas() {
   const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
   if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
 }
+const ZOOM_MAX = 16, ZOOM_STEPS = [0.25, 0.5, 1, 2, 4, 8, 16];
+const fitScale = p => Math.min(canvas.width / p.w, canvas.height / p.h) * 0.96;
+const curScale = p => state.zoom === 'fit' ? fitScale(p) : state.zoom;   // device pixels per image pixel
 function viewRect(p, W, H) {
-  let scale, cx = 0.5, cy = 0.5;
-  if (state.zoom === 'fit') scale = Math.min(W / p.w, H / p.h) * 0.96; else scale = 1;
+  let scale = curScale(p), cx = 0.5, cy = 0.5;
   const vw = W / (p.w * scale), vh = H / (p.h * scale);
   if (state.zoom !== 'fit') {
     cx = vw >= 1 ? 0.5 : clamp(state.pan.x, vw / 2, 1 - vw / 2); cy = vh >= 1 ? 0.5 : clamp(state.pan.y, vh / 2, 1 - vh / 2);
@@ -1042,12 +1232,9 @@ function refreshLibraryUI() {
     p.el.setAttribute('aria-pressed', state.selected.has(p.id));
   });
   const n = state.selected.size, total = state.photos.length;
-  $('#selInfo').textContent = !total ? 'No photos yet.' : n > 1
-    ? `${n} of ${total} selected. ${state.autoSync ? 'Edits apply to all of them.' : 'Edits apply to the photo in view only.'}`
-    : `${total} photo${total === 1 ? '' : 's'} in the library. Editing the one in view.`;
-  $('#presetHint').textContent = n > 1 ? `Applies to the ${n} selected photos.` : 'Applies to the photo in view. Select more to apply to several.';
+  $('#selInfo').textContent = !total ? 'No photos yet.' : `${total} photo${total === 1 ? '' : 's'} in the library, ${n} selected. Editing ${scopeText()}.`;
+  refreshScopeUI();
   $('#btnSync').disabled = n < 2; $('#btnPaste').disabled = !state.clip || !n; $('#btnRemove').disabled = !n;
-  $('#autoSync').checked = state.autoSync;
 }
 function setActive(id, { keepSelection = false } = {}) {
   const p = byId(id); if (!p) return;
@@ -1077,12 +1264,12 @@ function refreshStageInfo() {
   if (!p) { box.innerHTML = ''; return; }
   const stock = lutName(p.settings.stock) || 'No film';
   box.innerHTML = `<span class="tag">${esc(p.name)}</span>` + (p.w ? `<span class="tag">${p.w}×${p.h}</span>` : '') +
-    `<span class="tag">${esc(stock)}</span>` + (state.zoom !== 'fit' ? '<span class="tag">100%</span>' : '') + (state.before ? '<span class="tag before">Before</span>' : '');
+    `<span class="tag">${esc(stock)}</span>` + (targets().length > 1 ? `<span class="tag many">Editing ${targets().length} photos</span>` : '') + (state.zoom !== 'fit' ? `<span class="tag">${zoomPct()}</span>` : '') + (state.before ? '<span class="tag before">Before</span>' : '');
 }
 
 /* ---------------- develop controls ---------------- */
 function sliderHTML([key, label, min, max, step, def]) {
-  return `<div class="sl${key === 'halHue' ? ' hue-track' : ''}" data-key="${key}"><label for="s-${key}" title="Double-click to reset">${label}</label><button class="val" type="button" data-reset="${key}" title="Reset"></button><input type="range" id="s-${key}" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${def}"></div>`;
+  return `<div class="sl${key === 'halHue' || key === 'leakHue' ? ' hue-track' : ''}" data-key="${key}"><label for="s-${key}" title="Double-click to reset">${label}</label><span class="val"></span><button class="rst" type="button" data-reset="${key}" aria-label="Reset ${label}" title="Reset to ${def}">\u21BA</button><input type="range" id="s-${key}" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${def}"></div>`;
 }
 function buildPanels() {
   let html = `<details open><summary>Film stock</summary><div class="sec"><div class="stocks" id="stockList"></div>${sliderHTML(SLIDERS.strength)}
@@ -1100,13 +1287,18 @@ function buildPanels() {
     <p class="fineprint">Film pack: the <a href="https://rawpedia.rawtherapee.com/Film_Simulation" target="_blank" rel="noopener">RawTherapee Film Simulation Collection</a> (2015) by Pat David, Pavlov Dmitry and Michael Ezra, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, resampled to 33\u00B3 for this app. Film names describe the stock each look approximates; no affiliation with the makers.</p>
     </div></details>`;
   for (const g of GROUPS) {
-    html += `<details${g.id === 'vignette' ? '' : ' open'}><summary>${g.title}</summary><div class="sec">${g.note ? `<p class="hint">${g.note}</p>` : ''}${g.sliders.map(sliderHTML).join('')}</div></details>`;
+    html += `<details${g.id === 'vignette' ? '' : ' open'}><summary>${g.title}</summary><div class="sec">${g.note ? `<p class="hint">${g.note}</p>` : ''}${g.sliders.map(sliderHTML).join('')}`
+      + (g.date ? `<div class="add-row"><input type="text" id="s-dateText" maxlength="14" spellcheck="false" aria-label="Date stamp text" title="Digits, spaces, ' . - and :"><button class="btn small" type="button" data-today>Today</button></div>` : '')
+      + (g.shuffle ? `<div class="btn-row"><button class="btn small" type="button" data-shuffle>Shuffle the pattern</button></div>` : '')
+      + `</div></details>`;
   }
   $('#groups').innerHTML = html;
   buildStockList();
   $('#groups').addEventListener('input', e => { const k = e.target.dataset.key; if (k) { setFill(e.target); applySetting(k, Number(e.target.value)); } });
   $('#groups').addEventListener('click', e => {
     const r = e.target.closest('[data-reset]'); if (r) { applySetting(r.dataset.reset, SLIDERS[r.dataset.reset][5]); syncControls(); return; }
+    if (e.target.closest('[data-shuffle]')) { applySetting('texSeed', 2 + Math.floor(Math.random() * 9997)); return; }
+    if (e.target.closest('[data-today]')) { const d = new Date(); const t = `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`; applySetting('dateText', t); syncControls(); return; }
     const rg = e.target.closest('[data-rmgroup]');
     if (rg) {
       if (rg.dataset.armed) removeLutGroup(rg.dataset.rmgroup);
@@ -1123,7 +1315,10 @@ function buildPanels() {
   }, true);
   $('#groups').addEventListener('dblclick', e => { const l = e.target.closest('.sl label'); if (l) { const k = l.parentElement.dataset.key; applySetting(k, SLIDERS[k][5]); syncControls(); } });
   $('#groups').addEventListener('change', e => { if (e.target.id === 'cubeIn' || e.target.id === 'lutDir') loadLutFiles(e.target); });
-  $('#groups').addEventListener('input', e => { if (e.target.id === 'lutSearch') { state.lutQuery = e.target.value.trim(); buildLutLib(); } });
+  $('#groups').addEventListener('input', e => {
+    if (e.target.id === 'lutSearch') { state.lutQuery = e.target.value.trim(); buildLutLib(); }
+    if (e.target.id === 's-dateText') applySetting('dateText', e.target.value);
+  });
 }
 function stockStrip(entry) {
   const c = document.createElement('canvas'); c.width = 9; c.height = 1;
@@ -1186,15 +1381,34 @@ function syncControls() {
     const inp = document.getElementById('s-' + key); if (!inp) continue;
     inp.value = s[key]; setFill(inp);
     const val = inp.parentElement.querySelector('.val'); val.textContent = fmt ? fmt(s[key]) : (min < 0 ? pm(s[key]) : Math.round(s[key]));
+    inp.parentElement.classList.toggle('is-default', s[key] === SLIDERS[key][5]);
   }
+  const dt = $('#s-dateText'); if (dt && document.activeElement !== dt) dt.value = s.dateText;
   document.querySelectorAll('#groups [data-stock]').forEach(b => { const on = b.dataset.stock === s.stock; b.setAttribute('aria-pressed', on); const g = on && b.closest('.lut-group'); if (g && !g.open) g.open = true; });
 }
-function targets() { const p = active(); if (!p) return []; return state.autoSync ? selectedPhotos() : [p]; }
+function targets() {
+  const p = active(); if (!p) return [];
+  if (state.editScope === 'all') return state.photos.filter(q => q.ready || q === p);
+  if (state.editScope === 'selected') return selectedPhotos();
+  return [p];
+}
+const scopeText = () => { const n = targets().length; return n > 1 ? `${n} photos` : 'the photo in view'; };
+function refreshScopeUI() {
+  const n = state.selected.size, total = state.photos.length;
+  document.querySelectorAll('input[name=editScope]').forEach(r => { r.checked = r.value === state.editScope; });
+  $('#scopeSelLabel').textContent = `Selected (${n})`; $('#scopeAllLabel').textContent = `All (${total})`;
+  $('#scopeBar').classList.toggle('many', targets().length > 1);
+  $('#btnReset').textContent = targets().length > 1 ? `Reset ${targets().length} photos` : 'Reset photo';
+  $('#presetHint').textContent = `Applies to ${scopeText()}. Change this with \u201cEdits apply to\u201d on the right.`;
+}
+document.querySelectorAll('input[name=editScope]').forEach(r => r.addEventListener('change', () => {
+  state.editScope = r.value; prefs.set('editScope', state.editScope); refreshLibraryUI(); refreshStageInfo();
+}));
 function applySetting(key, val) {
   const ts = targets(); if (!ts.length) return;
   ts.forEach(p => { p.settings[key] = val; persistSoon(p); });
   const sl = SLIDERS[key];
-  if (sl) { const v = document.querySelector(`.sl[data-key="${key}"] .val`); if (v) v.textContent = sl[6] ? sl[6](val) : (sl[2] < 0 ? pm(val) : Math.round(val)); }
+  if (sl) { const row = document.querySelector(`.sl[data-key="${key}"]`); if (row) { row.querySelector('.val').textContent = sl[6] ? sl[6](val) : (sl[2] < 0 ? pm(val) : Math.round(val)); row.classList.toggle('is-default', val === sl[5]); } }
   if (key === 'stock') refreshStageInfo();
   requestDraw(); queueThumbs(ts); schedulePalette();
 }
@@ -1205,11 +1419,10 @@ function applySettingsTo(ps, settings, label) {
 }
 
 /* ---------------- library actions ---------------- */
-$('#autoSync').addEventListener('change', e => { state.autoSync = e.target.checked; prefs.set('autoSync', state.autoSync); refreshLibraryUI(); });
 $('#btnSelAll').onclick = () => { state.selected = new Set(state.photos.map(p => p.id)); refreshLibraryUI(); };
 $('#btnSelOne').onclick = () => { if (state.activeId) { state.selected = new Set([state.activeId]); refreshLibraryUI(); } };
 function copySettings() { const p = active(); if (!p) return; state.clip = { ...p.settings }; refreshLibraryUI(); toast('Settings copied'); }
-function pasteSettings() { if (!state.clip) return; const ps = selectedPhotos(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`); }
+function pasteSettings() { if (!state.clip) return; const ps = targets(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`); }
 $('#btnCopy').onclick = copySettings; $('#btnPaste').onclick = pasteSettings;
 $('#btnSync').onclick = () => { const p = active(); if (!p) return; const ps = selectedPhotos().filter(q => q !== p); applySettingsTo(ps, p.settings, `Matched ${ps.length} photo${ps.length === 1 ? '' : 's'} to this one`); };
 $('#btnRemove').onclick = () => { const n = state.selected.size; $('#removeText').textContent = `Remove ${n} photo${n === 1 ? '' : 's'} from the library? Your original files aren’t touched.`; $('#removeConfirm').hidden = false; };
@@ -1248,7 +1461,7 @@ $('#presetList').addEventListener('click', e => {
   if (del) { state.userPresets.splice(+del.dataset.del, 1); prefs.set('presets', state.userPresets); renderPresets(); return; }
   const b = e.target.closest('.preset'); if (!b) return;
   const all = [...BUILTIN_PRESETS, ...state.userPresets], pr = all[+b.dataset.i];
-  const ps = selectedPhotos(); if (!ps.length) return;
+  const ps = targets(); if (!ps.length) return;
   applySettingsTo(ps, pr.s, `“${pr.name}” applied to ${ps.length} photo${ps.length === 1 ? '' : 's'}`);
 });
 $('#presetSave').onclick = () => {
@@ -1258,6 +1471,28 @@ $('#presetSave').onclick = () => {
   state.userPresets.push({ name, s }); prefs.set('presets', state.userPresets); $('#presetName').value = ''; renderPresets(); toast(`Saved “${name}”`);
 };
 $('#presetName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#presetSave').click(); });
+$('#presetExport').onclick = async () => {
+  if (!state.userPresets.length) { toast('Save a preset first'); return; }
+  try { await saveFile('safelight-presets.json', JSON.stringify({ app: 'Safelight Film Lab', version: 1, presets: state.userPresets }, null, 2)); }
+  catch (e) { toast(e?.message || 'The presets couldn\u2019t be saved'); }
+};
+$('#presetImport').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text()), list = Array.isArray(data) ? data : data.presets;
+    if (!Array.isArray(list)) throw new Error();
+    const have = new Set(state.userPresets.map(p => p.name + JSON.stringify(p.s)));
+    let added = 0;
+    for (const pr of list) {
+      if (!pr || typeof pr.name !== 'string' || typeof pr.s !== 'object') continue;
+      const s = {}; for (const k of Object.keys(DEFAULTS)) if (k in pr.s && typeof pr.s[k] === typeof DEFAULTS[k]) s[k] = pr.s[k];
+      const clean = { name: pr.name.slice(0, 40), s }, key = clean.name + JSON.stringify(s);
+      if (have.has(key)) continue; have.add(key); state.userPresets.push(clean); added++;
+    }
+    prefs.set('presets', state.userPresets); renderPresets();
+    toast(added ? `Imported ${added} preset${added === 1 ? '' : 's'}` : 'Those presets are already here');
+  } catch { toast('That file isn\u2019t a Safelight presets file'); }
+});
 
 /* ---------------- .cube in and out ---------------- */
 async function loadLutFiles(input) {
@@ -1301,7 +1536,7 @@ function removeLutGroup(g) {
 }
 $('#btnCube').onclick = async () => {
   const p = active(); if (!p) return;
-  const N = 33, W = N * N, s = { ...p.settings, grain: 0, halation: 0, bloom: 0, vignette: 0 };
+  const N = 33, W = N * N, s = { ...p.settings, grain: 0, halation: 0, bloom: 0, vignette: 0, dust: 0, hairs: 0, scratches: 0, stains: 0, leak: 0, soften: 0, aberration: 0, frameEdge: 0, dateStamp: 0 };
   const id = new Float32Array(W * N * 4);
   for (let b = 0; b < N; b++) for (let x = 0; x < W; x++) { const i = (b * W + x) * 4; id[i] = (x % N) / (N - 1); id[i + 1] = Math.floor(x / N) / (N - 1); id[i + 2] = b / (N - 1); id[i + 3] = 1; }
   const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
@@ -1315,7 +1550,7 @@ $('#btnCube').onclick = async () => {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); freeRT(rt); gl.deleteTexture(t);
   await ensureLut(p.settings.stock);
   const title = (lutName(p.settings.stock) || 'Safelight') + ' look';
-  const lines = [`TITLE "${title}"`, '# Made in Safelight Film Lab. Colour and tone only: grain, halation and vignette are not included.', `LUT_3D_SIZE ${N}`, 'DOMAIN_MIN 0 0 0', 'DOMAIN_MAX 1 1 1'];
+  const lines = [`TITLE "${title}"`, '# Made in Safelight Film Lab. Colour and tone only: grain, halation, vignette, dust, leaks and other texture are not included.', `LUT_3D_SIZE ${N}`, 'DOMAIN_MIN 0 0 0', 'DOMAIN_MAX 1 1 1'];
   for (let b = 0; b < N; b++) for (let g = 0; g < N; g++) for (let r = 0; r < N; r++) {
     const i = ((N - 1 - b) * W + r + N * g) * 4; lines.push(`${(px[i] * scale).toFixed(6)} ${(px[i + 1] * scale).toFixed(6)} ${(px[i + 2] * scale).toFixed(6)}`);
   }
@@ -1509,14 +1744,55 @@ function updateStageCursor() {
   stage.classList.toggle('zoomed', !state.picking && state.zoom !== 'fit');
   stage.classList.toggle('zoomable', !state.picking && state.zoom === 'fit');
 }
-function syncZoomBtn() { $('#btnZoom').setAttribute('aria-pressed', state.zoom !== 'fit'); $('#btnZoom').textContent = state.zoom === 'fit' ? '100%' : 'Fit'; updateStageCursor(); refreshStageInfo(); }
+const zoomPct = () => { const p = active(); return p && p.w ? Math.round(curScale(p) * 100) + '%' : ''; };
+function syncZoomBtn() {
+  const p = active();
+  $('#btnZoom').textContent = state.zoom === 'fit' ? 'Fit' : zoomPct();
+  $('#btnZoom').setAttribute('aria-label', state.zoom === 'fit' ? 'Zoom: fit to window' : `Zoom: ${zoomPct()}`);
+  $('#zoomIn').disabled = !!p && curScale(p) >= ZOOM_MAX - 1e-6;
+  $('#zoomOut').disabled = state.zoom === 'fit';
+  updateStageCursor(); refreshStageInfo();
+}
 function setZoom(z, at) {
   const p = active(); if (!p) return;
+  if (z === '1:1') z = 1;
+  if (z !== 'fit') { z = clamp(z, 0.05, ZOOM_MAX); if (z <= fitScale(p) * 1.001) z = 'fit'; }
   state.zoom = z; if (at) state.pan = { x: at[0], y: at[1] };
   if (z !== 'fit') ensureFull(p);
   syncZoomBtn(); requestDraw();
 }
-$('#btnZoom').onclick = () => setZoom(state.zoom === 'fit' ? '1:1' : 'fit', [0.5, 0.5]);
+// Zoom so the image point under (fx, fy) — fractions of the canvas — stays put.
+function zoomTo(scale, fx = 0.5, fy = 0.5) {
+  const p = active(); if (!p?.ready) return;
+  const W = canvas.width, H = canvas.height, v = viewRect(p, W, H), ip = [v[0] + fx * v[2], v[1] + fy * v[3]];
+  scale = clamp(scale, fitScale(p), ZOOM_MAX);
+  if (scale <= fitScale(p) * 1.001) { setZoom('fit'); return; }
+  const vw = W / (p.w * scale), vh = H / (p.h * scale);
+  setZoom(scale, [ip[0] - fx * vw + vw / 2, ip[1] - fy * vh + vh / 2]);
+}
+function zoomStep(dir, fx, fy) {
+  const p = active(); if (!p?.ready) return;
+  const cur = curScale(p), fit = fitScale(p);
+  const steps = [...new Set([fit, ...ZOOM_STEPS.filter(z => z > fit * 1.01)])].sort((a, b) => a - b);
+  const next = dir > 0 ? steps.find(z => z > cur * 1.01) : [...steps].reverse().find(z => z < cur * 0.99);
+  if (next != null) zoomTo(next, fx, fy);
+}
+$('#btnZoom').onclick = () => { const p = active(); if (p) zoomTo(state.zoom === 'fit' ? Math.max(1, fitScale(p) * 2) : 0); };
+$('#zoomIn').onclick = () => zoomStep(1);
+$('#zoomOut').onclick = () => zoomStep(-1);
+stage.addEventListener('wheel', e => {
+  const p = active(); if (!p?.ready) return;
+  const r = canvas.getBoundingClientRect(), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1;
+  if (e.ctrlKey || e.metaKey) {           // trackpad pinch arrives as ctrl+wheel
+    e.preventDefault();
+    zoomTo(curScale(p) * Math.exp(-clamp(e.deltaY * k, -60, 60) * 0.01), (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+  } else if (state.zoom !== 'fit') {      // two-finger scroll pans
+    e.preventDefault();
+    const v = viewRect(p, canvas.width, canvas.height), dpr = canvas.width / r.width;
+    state.pan = { x: state.pan.x + e.deltaX * k * dpr * v[2] / canvas.width, y: state.pan.y + e.deltaY * k * dpr * v[3] / canvas.height };
+    requestDraw();
+  }
+}, { passive: false });
 function canvasToImage(ev) {
   const p = active(); if (!p) return null;
   const r = canvas.getBoundingClientRect(), v = viewRect(p, canvas.width, canvas.height);
@@ -1529,21 +1805,28 @@ function samplePixel(px) {
   const c = [0, 0, 0]; for (let i = 0; i < 36; i += 4) { c[0] += buf[i]; c[1] += buf[i + 1]; c[2] += buf[i + 2]; }
   return c.map(v => v / 9);
 }
-let drag = null;
+let drag = null, pinch = null;
+const touches = new Map();
+const pinchInfo = () => { const [a, b] = [...touches.values()], r = canvas.getBoundingClientRect(); return { d: Math.hypot(a.x - b.x, a.y - b.y), fx: ((a.x + b.x) / 2 - r.left) / r.width, fy: ((a.y + b.y) / 2 - r.top) / r.height }; };
 stage.addEventListener('pointerdown', e => {
   if (!active()?.ready || e.button !== 0) return;
-  drag = { x: e.clientX, y: e.clientY, moved: false, pan: { ...state.pan } };
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size === 2) { drag = null; pinch = pinchInfo(); stage.classList.remove('dragging'); return; }
+  const v = viewRect(active(), canvas.width, canvas.height);
+  drag = { x: e.clientX, y: e.clientY, moved: false, pan: { ...state.pan }, perPx: [v[2] / canvas.width, v[3] / canvas.height] };
   stage.setPointerCapture(e.pointerId);
   if (state.zoom !== 'fit' && !state.picking) stage.classList.add('dragging');
 });
 stage.addEventListener('pointermove', e => {
   const p = active(); if (!p?.ready) return;
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && touches.size === 2) { const n = pinchInfo(); zoomTo(curScale(p) * n.d / Math.max(1, pinch.d), n.fx, n.fy); pinch = n; return; }
   if (drag) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
     if (state.zoom !== 'fit' && !state.picking && drag.moved) {
       const dpr = canvas.width / canvas.getBoundingClientRect().width;
-      state.pan = { x: drag.pan.x - dx * dpr / p.w, y: drag.pan.y - dy * dpr / p.h }; requestDraw();
+      state.pan = { x: drag.pan.x - dx * dpr * drag.perPx[0], y: drag.pan.y - dy * dpr * drag.perPx[1] }; requestDraw();
     }
   }
   const hit = canvasToImage(e), loupe = $('#loupe');
@@ -1558,14 +1841,15 @@ stage.addEventListener('pointermove', e => {
 });
 stage.addEventListener('pointerleave', () => { $('#loupe').hidden = true; });
 stage.addEventListener('pointerup', e => {
+  touches.delete(e.pointerId); if (touches.size < 2) pinch = null;
   if (!drag) return; const d = drag; drag = null; stage.classList.remove('dragging');
   if (d.moved) return;
   const hit = canvasToImage(e); if (!hit) return;
   const inside = hit.img[0] >= 0 && hit.img[1] >= 0 && hit.img[0] <= 1 && hit.img[1] <= 1;
   if (state.picking) { if (inside) { const hex = rgbToHex(samplePixel(hit.px)); addSwatch(hex); toast(`Added ${hex}`); } return; }
-  if (state.zoom === 'fit') { if (inside) setZoom('1:1', hit.img); } else setZoom('fit');
+  if (state.zoom === 'fit') { if (inside) setZoom(Math.max(1, fitScale(active()) * 2), hit.img); } else setZoom('fit');
 });
-stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
+stage.addEventListener('pointercancel', e => { touches.delete(e.pointerId); pinch = null; drag = null; stage.classList.remove('dragging'); });
 function setBefore(on) { if (state.before === on) return; state.before = on; refreshStageInfo(); requestDraw(); }
 const bb = $('#btnBefore');
 bb.addEventListener('pointerdown', () => setBefore(true));
@@ -1577,17 +1861,24 @@ window.addEventListener('keydown', e => {
   const typing = e.target.closest?.('input,textarea,select,dialog');
   const mod = e.metaKey || e.ctrlKey;
   if (e.key === 'Escape' && state.picking) { setPicking(false); return; }
+  // Left/right always move between photos, even with a slider focused (up/down still nudge the slider).
+  const onSlider = e.target.matches?.('input[type=range]') && !e.target.closest('dialog');
+  if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !mod && !e.altKey && (!typing || onSlider)) {
+    e.preventDefault();
+    const i = state.photos.findIndex(p => p.id === state.activeId), j = clamp(i + (e.key === 'ArrowRight' ? 1 : -1), 0, state.photos.length - 1);
+    if (state.photos[j] && j !== i) setActive(state.photos[j].id);
+    return;
+  }
   if (typing) return;
   if (e.key === '\\') { setBefore(true); e.preventDefault(); return; }
   if (mod && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); copySettings(); return; }
   if (mod && e.shiftKey && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteSettings(); return; }
   if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); $('#btnSelAll').click(); return; }
   if (mod) return;
-  if (e.key === 'z' || e.key === 'Z') { setZoom(state.zoom === 'fit' ? '1:1' : 'fit', [0.5, 0.5]); return; }
-  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    const i = state.photos.findIndex(p => p.id === state.activeId), j = clamp(i + (e.key === 'ArrowRight' ? 1 : -1), 0, state.photos.length - 1);
-    if (state.photos[j] && j !== i) { e.preventDefault(); setActive(state.photos[j].id); }
-  }
+  if (e.key === 'z' || e.key === 'Z') { $('#btnZoom').click(); return; }
+  if (e.key === '=' || e.key === '+') { zoomStep(1); return; }
+  if (e.key === '-' || e.key === '_') { zoomStep(-1); return; }
+  if (e.key === '0') { setZoom('fit'); return; }
 });
 window.addEventListener('keyup', e => { if (e.key === '\\') setBefore(false); });
 new ResizeObserver(() => requestDraw()).observe(stage);
