@@ -1,0 +1,1690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Safelight Film Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: darkroom bench. Presets and colours on the left, the photo in the middle with the colour check and filmstrip under it, develop controls on the right.
+   One dark theme on purpose: a neutral grey surround keeps colour judgements honest, the way an editing suite is lit. */
+:root{
+  color-scheme: dark;
+  --bg:#1a1a1b;
+  --panel:#222223;
+  --panel-2:#2a2a2c;
+  --line:#38383b;
+  --fg:#e7e5e2;
+  --muted:#a09e9a;
+  --dim:#6f6d6a;
+  --stage:#121213;
+  --safelight:#e2583c;      /* darkroom safelight: selection and primary actions only */
+  --safelight-soft:rgba(226,88,60,.22);
+  --edge:#d58a3a;           /* film edge-print orange */
+  --ok:#86bd85; --warn:#dcab4c; --far:#8f8c88;
+  --f-ui:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:13px;line-height:1.4;font-variation-settings:"wdth" 100}
+*,*::before,*::after{box-sizing:border-box}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--safelight);outline-offset:2px}
+
+.app{height:100%;display:grid;gap:10px;padding:10px 16px;
+  grid-template-columns:250px minmax(0,1fr) 296px;
+  grid-template-rows:auto minmax(0,1fr) auto auto;
+  grid-template-areas:"top top top" "left stage right" "left cmp right" "left film right"}
+.top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:8px}
+.brand-mark{width:10px;height:10px;border-radius:50%;background:var(--safelight);box-shadow:0 0 12px 2px var(--safelight-soft);align-self:center}
+.brand b{font-weight:650;font-size:16px;letter-spacing:.01em;font-variation-settings:"wdth" 112}
+.brand span.sub{color:var(--muted);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-variation-settings:"wdth" 80}
+.top-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;white-space:nowrap;user-select:none;font-size:12.5px}
+.btn:hover{border-color:#55555a}
+.btn.primary{background:var(--safelight);border-color:var(--safelight);color:#1a0d09;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn[aria-pressed="true"]{border-color:var(--safelight);color:#fff;background:var(--safelight-soft)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.small{height:26px;padding:0 9px;font-size:12px}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;text-underline-offset:2px;cursor:pointer;font-size:12px}
+.linkbtn:hover{color:var(--fg)}
+
+.panel{background:var(--panel);border-radius:var(--r);overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.left{grid-area:left}
+.right{grid-area:right;display:flex;flex-direction:column}
+details{border-bottom:1px solid var(--line)}
+details:last-of-type{border-bottom:0}
+summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;font-variation-settings:"wdth" 85}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"";width:6px;height:6px;border-right:1.5px solid var(--dim);border-bottom:1.5px solid var(--dim);transform:rotate(45deg);margin-top:-3px}
+details[open]>summary::after{transform:rotate(-135deg);margin-top:3px}
+summary:hover{color:var(--fg)}
+.sec{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.hint{color:var(--muted);font-size:12px;margin:0}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;cursor:pointer}
+.check input{margin:2px 0 0;accent-color:var(--safelight)}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.btn-grid .btn{width:100%}
+.btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.confirm{background:var(--panel-2);border:1px solid var(--safelight);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+
+/* sliders */
+.sl{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;row-gap:2px}
+.sl label{font-size:12.5px;color:#d3d1cd;cursor:default;user-select:none}
+.sl .val{font-family:var(--f-mono);font-size:11px;color:var(--muted);background:none;border:0;padding:0 2px;cursor:pointer;font-variant-numeric:tabular-nums;min-width:44px;text-align:right}
+.sl .val:hover{color:var(--fg)}
+.sl input{grid-column:1/-1}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;margin:0;cursor:pointer;--a:0%;--b:0%}
+input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--line) var(--a),#a9a6a1 var(--a),#a9a6a1 var(--b),var(--line) var(--b))}
+input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:linear-gradient(to right,var(--line) var(--a),#a9a6a1 var(--a),#a9a6a1 var(--b),var(--line) var(--b))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--fg);margin-top:-4.5px;border:0;box-shadow:0 0 0 3px var(--panel)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--fg);border:0;box-shadow:0 0 0 3px var(--panel)}
+input[type=range]:focus-visible{outline:none}
+input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--safelight)}
+.hue-track input[type=range]::-webkit-slider-runnable-track{background:linear-gradient(to right,#ff2a1a,#ff6a1e,#ffa21f)}
+.hue-track input[type=range]::-moz-range-track{background:linear-gradient(to right,#ff2a1a,#ff6a1e,#ffa21f)}
+
+/* film stocks */
+.stocks{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stock{display:flex;flex-direction:column;gap:5px;padding:7px 8px 8px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);cursor:pointer;text-align:left;min-width:0;position:relative}
+.stock:hover{border-color:#55555a}
+.stock[aria-pressed="true"]{border-color:var(--safelight);background:var(--safelight-soft)}
+.stock b{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variation-settings:"wdth" 92}
+.stock small{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stock canvas{width:100%;height:9px;border-radius:2px;display:block;image-rendering:pixelated}
+.stock .x{position:absolute;top:3px;right:4px;border:0;background:none;color:var(--dim);cursor:pointer;font-size:14px;line-height:1;padding:2px}
+.stock .x:hover{color:var(--fg)}
+.fineprint{color:var(--dim);font-size:10.5px;margin:0}
+.fineprint a{color:var(--muted)}
+.lutlib{display:flex;flex-direction:column;gap:6px}
+.lutlib-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.lutlib-head b{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;font-variation-settings:"wdth" 85}
+.lutlib-head span{font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+.lut-search{height:30px;border-radius:6px;border:1px solid var(--line);background:var(--bg);padding:0 9px;width:100%}
+.lut-status{font-family:var(--f-mono);font-size:10.5px;color:var(--muted)}
+.lut-group{border:1px solid var(--line);border-radius:6px;background:var(--panel-2)}
+.lut-group:last-of-type{border-bottom:1px solid var(--line)}
+.lut-group>summary{padding:7px 9px;font-size:12px;letter-spacing:0;text-transform:none;color:var(--fg);font-weight:600;font-variation-settings:"wdth" 92}
+.lut-group>summary em{font-style:normal;font-weight:400;color:var(--dim);font-family:var(--f-mono);font-size:10.5px;margin-left:auto;margin-right:10px}
+.lut-rows{display:flex;flex-direction:column;padding:0 4px 6px;max-height:260px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.lut-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px;border-radius:4px;border:1px solid transparent;background:none;cursor:pointer;text-align:left;width:100%}
+.lut-row:hover{background:var(--panel)}
+.lut-row[aria-pressed="true"]{border-color:var(--safelight);background:var(--safelight-soft)}
+.lut-row canvas{width:36px;height:9px;border-radius:2px;image-rendering:pixelated}
+.lut-row span:not(.x){font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lut-row .x{color:var(--dim);font-size:14px;padding:0 3px;line-height:1}
+.lut-row .x:hover{color:var(--fg)}
+.lut-group .linkbtn{margin:0 9px 8px}
+.panel-foot{margin-top:auto;padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:6px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--panel)}
+
+/* presets */
+.presets{display:flex;flex-direction:column;gap:4px}
+.preset{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;background:var(--panel-2);border:1px solid transparent;cursor:pointer;text-align:left;width:100%}
+.preset:hover{border-color:var(--line)}
+.preset span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset em{font-style:normal;color:var(--dim);font-size:11px}
+.preset .x{color:var(--dim);border:0;background:none;cursor:pointer;padding:0 2px;font-size:14px}
+.preset .x:hover{color:var(--fg)}
+.add-row{display:flex;gap:6px}
+.add-row input[type=text]{flex:1;min-width:0;height:30px;border-radius:6px;border:1px solid var(--line);background:var(--bg);padding:0 9px}
+.add-row input[type=color]{width:34px;height:30px;padding:2px;border-radius:6px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+
+/* swatches */
+.swatches{display:flex;flex-direction:column;gap:4px;margin:0;padding:0;list-style:none}
+.sw{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center}
+.sw i{width:22px;height:22px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.sw input{background:transparent;border:0;border-bottom:1px solid transparent;padding:2px 0;min-width:0;width:100%}
+.sw input:hover,.sw input:focus{border-bottom-color:var(--line);outline:none}
+.sw .hex{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.sw .x{color:var(--dim);border:0;background:none;cursor:pointer;font-size:14px;padding:0 2px}
+.sw .x:hover{color:var(--fg)}
+.sw-name{display:flex;flex-direction:column;min-width:0}
+
+/* stage */
+.stage{grid-area:stage;position:relative;background:var(--stage);border-radius:var(--r);overflow:hidden;min-height:0;touch-action:pan-y}
+.stage.zoomed,.stage.picking{touch-action:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage.zoomable{cursor:zoom-in}
+.stage.zoomed{cursor:grab}
+.stage.zoomed.dragging{cursor:grabbing}
+.stage.picking{cursor:crosshair}
+.stage-info{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;pointer-events:none;max-width:calc(100% - 20px)}
+.tag{background:rgba(10,10,10,.72);backdrop-filter:blur(6px);border-radius:4px;padding:3px 7px;font-size:11px;color:#d8d6d2;font-family:var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tag.before{background:var(--safelight);color:#1a0d09}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:20px;color:var(--muted)}
+.empty b{color:var(--fg);font-size:15px;font-weight:600}
+.dropping .stage::after{content:"Drop to add to the library";position:absolute;inset:8px;border:2px dashed var(--safelight);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(18,18,19,.7)}
+.loupe{position:absolute;pointer-events:none;background:rgba(10,10,10,.86);border-radius:6px;padding:7px 9px;display:grid;grid-template-columns:28px auto;gap:2px 9px;align-items:center;font-size:11px;z-index:3;min-width:150px}
+.loupe i{grid-row:span 2;width:28px;height:28px;border-radius:4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
+.loupe b{font-family:var(--f-mono);font-weight:500}
+.loupe span{color:var(--muted)}
+.busy{position:absolute;right:10px;bottom:10px;font-size:11px;color:var(--muted);font-family:var(--f-mono)}
+
+/* colour check */
+.cmp{grid-area:cmp;background:var(--panel);border-radius:var(--r);padding:10px 12px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
+.cmp h3{margin:0 0 7px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;font-variation-settings:"wdth" 85}
+.cards{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.card{flex:none;display:flex;gap:8px;align-items:center;background:var(--panel-2);border-radius:6px;padding:6px 9px 6px 6px;min-width:0}
+.split{display:flex;width:38px;height:30px;border-radius:4px;overflow:hidden;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.split i{flex:1}
+.card-meta{display:flex;flex-direction:column;min-width:0;gap:1px}
+.card-meta b{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+.card-meta span{font-family:var(--f-mono);font-size:10.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pill{font-style:normal;font-size:10px;padding:1px 6px;border-radius:9px;font-weight:600;letter-spacing:.02em;align-self:flex-start}
+.pill.ok{background:rgba(134,189,133,.18);color:var(--ok)}
+.pill.warn{background:rgba(220,171,76,.18);color:var(--warn)}
+.pill.far{background:rgba(143,140,136,.18);color:var(--far)}
+.up{color:var(--ok)} .down{color:var(--safelight)}
+.bars{display:flex;flex-direction:column;gap:5px}
+.bar-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:center;font-size:10.5px;color:var(--muted);font-family:var(--f-mono)}
+.bar{display:flex;height:20px;border-radius:3px;overflow:hidden}
+.bar i{min-width:2px;cursor:pointer}
+.bar i:hover{outline:1px solid #fff;outline-offset:-1px}
+
+/* filmstrip */
+.film{grid-area:film;background:#0d0c0b;border-radius:var(--r);overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.film-track{display:flex;gap:8px;padding:15px 10px 14px;width:max-content;min-width:100%;
+  background:repeating-linear-gradient(90deg,transparent 0 9px,#26231f 9px 17px) left 4px/100% 6px no-repeat,
+             repeating-linear-gradient(90deg,transparent 0 9px,#26231f 9px 17px) left calc(100% - 4px)/100% 6px no-repeat}
+.frame{position:relative;display:flex;flex-direction:column;gap:3px;padding:0;border:0;background:none;cursor:pointer;flex:none}
+.frame canvas{height:78px;width:auto;display:block;border-radius:2px;background:#222;outline:2px solid transparent;outline-offset:2px}
+.frame.sel canvas{outline-color:rgba(226,88,60,.5)}
+.frame.active canvas{outline-color:var(--safelight)}
+.frame .edge{font-family:var(--f-mono);font-size:9px;color:var(--edge);letter-spacing:.06em;display:flex;justify-content:space-between;gap:6px;opacity:.85}
+.frame .edge em{font-style:normal;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frame .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--edge);box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+.frame .pending{position:absolute;inset:0 0 16px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10px;font-family:var(--f-mono)}
+
+/* export dialog */
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:0;width:min(440px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:14px}
+.dlg h2{margin:0;font-size:17px;font-weight:650;font-variation-settings:"wdth" 108;text-wrap:balance}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg label{flex:1;min-width:90px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:7px 8px;border-radius:6px;border:1px solid var(--line);cursor:pointer;font-size:12.5px}
+.seg input:checked+span{border-color:var(--safelight);background:var(--safelight-soft)}
+.seg input:focus-visible+span{outline:2px solid var(--safelight)}
+select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(--line);background:var(--bg);padding:0 8px}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;align-items:center}
+.progress{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--safelight);transition:width .2s}
+
+.toasts{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:50;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.toast{background:#f1efeb;color:#1a1a1b;border-radius:6px;padding:8px 12px;font-size:12.5px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.fatal{padding:24px;max-width:60ch}
+
+@media (max-width:1100px){
+  .app{grid-template-columns:220px minmax(0,1fr) 270px}
+}
+@media (max-width:900px){
+  html,body{height:auto}
+  .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;
+    grid-template-areas:"top" "stage" "cmp" "film" "right" "left"}
+  .stage{height:clamp(260px,78vw,58vh)}
+  .panel{overflow:visible}
+  .cmp{grid-template-columns:minmax(0,1fr)}
+  .panel-foot{position:static}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><b>Safelight</b><span class="sub">Film Lab</span></div>
+    <div class="top-actions">
+      <label class="btn" for="fileIn">Import photos</label>
+      <input type="file" id="fileIn" multiple accept="image/*" hidden>
+      <button class="btn ghost" id="btnBefore" type="button" title="Hold to see the original. Shortcut: hold \">Hold for before</button>
+      <button class="btn ghost" id="btnZoom" type="button" aria-pressed="false" title="Shortcut: Z">100%</button>
+      <button class="btn primary" id="btnExport" type="button">Export…</button>
+    </div>
+  </header>
+
+  <aside class="panel left" aria-label="Library, presets and colours">
+    <details open>
+      <summary>Library</summary>
+      <div class="sec">
+        <p class="hint" id="selInfo">Loading…</p>
+        <label class="check"><input type="checkbox" id="autoSync"> <span>Sync edits across the selected photos</span></label>
+        <div class="btn-grid">
+          <button class="btn small" id="btnSelAll" type="button">Select all</button>
+          <button class="btn small" id="btnSelOne" type="button">Select one</button>
+          <button class="btn small" id="btnCopy" type="button" title="Ctrl/Cmd + Shift + C">Copy settings</button>
+          <button class="btn small" id="btnPaste" type="button" title="Ctrl/Cmd + Shift + V">Paste settings</button>
+          <button class="btn small" id="btnSync" type="button">Match selected</button>
+          <button class="btn small" id="btnRemove" type="button">Remove</button>
+        </div>
+        <div class="confirm" id="removeConfirm" hidden>
+          <span id="removeText">Remove these photos?</span>
+          <div class="btn-row"><button class="btn small primary" id="removeYes" type="button">Remove</button><button class="btn small" id="removeNo" type="button">Keep them</button></div>
+        </div>
+        <div class="btn-row">
+          <label class="btn small" for="folderIn">Import a folder</label>
+          <input type="file" id="folderIn" webkitdirectory multiple hidden>
+        </div>
+        <p class="fineprint">Photos stay in this browser. Nothing is uploaded. Click a frame to edit it; Ctrl/Cmd-click or Shift-click to select several.</p>
+      </div>
+    </details>
+    <details open>
+      <summary>Presets</summary>
+      <div class="sec">
+        <p class="hint" id="presetHint">Applies to the selected photos.</p>
+        <div class="presets" id="presetList"></div>
+        <div class="add-row"><input type="text" id="presetName" placeholder="Name this look" maxlength="40" aria-label="Preset name"><button class="btn small" id="presetSave" type="button">Save</button></div>
+      </div>
+    </details>
+    <details open>
+      <summary>Colours to match</summary>
+      <div class="sec">
+        <p class="hint">Add the colours the photos should sit with. The strip under the photo shows how close each graded photo gets.</p>
+        <ul class="swatches" id="swatchList"></ul>
+        <div class="add-row">
+          <input type="color" id="swPick" value="#c9a3bc" aria-label="Choose a colour">
+          <input type="text" id="swHex" value="#C9A3BC" maxlength="7" aria-label="Hex colour" spellcheck="false">
+          <button class="btn small" id="swAdd" type="button">Add</button>
+        </div>
+        <div class="btn-row">
+          <button class="btn small" id="swEyedrop" type="button" aria-pressed="false">Pick from photo</button>
+          <label class="btn small" for="swFromImg">From an image</label>
+          <input type="file" id="swFromImg" accept="image/*" hidden>
+        </div>
+        <button class="linkbtn" id="swBrand" type="button">Reset to the Wonder brand colours</button>
+        <label class="check"><input type="checkbox" id="cmpShow" checked> <span>Show the colour check under the photo</span></label>
+      </div>
+    </details>
+  </aside>
+
+  <main class="stage" id="stage" aria-label="Photo">
+    <canvas id="view"></canvas>
+    <div class="stage-info" id="stageInfo"></div>
+    <div class="empty" id="empty" hidden><b>Your library is empty</b><span>Drop photos here or use Import photos. JPEG, PNG and WebP work.</span></div>
+    <div class="loupe" id="loupe" hidden><i id="loupeChip"></i><b id="loupeHex"></b><span id="loupeNear"></span></div>
+    <div class="busy" id="busy" hidden></div>
+  </main>
+
+  <section class="cmp" id="cmp" aria-label="Colour check">
+    <div>
+      <h3>Your colours, closest match in this photo</h3>
+      <div class="cards" id="cmpCards"></div>
+    </div>
+    <div>
+      <h3>Photo palette</h3>
+      <div class="bars">
+        <div class="bar-row"><span>before</span><div class="bar" id="barBefore"></div></div>
+        <div class="bar-row"><span>after</span><div class="bar" id="barAfter"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="film" aria-label="Filmstrip"><div class="film-track" id="filmTrack"></div></section>
+
+  <aside class="panel right" aria-label="Develop">
+    <div id="groups"></div>
+    <div class="panel-foot">
+      <button class="btn small" id="btnReset" type="button">Reset photo</button>
+      <button class="btn small" id="btnCube" type="button" title="Colour and tone only. Grain, halation and vignette can't live in a LUT.">Save look as .cube</button>
+    </div>
+  </aside>
+</div>
+
+<dialog id="exportDlg">
+  <form class="dlg" id="exportForm" method="dialog">
+    <h2>Export graded photos</h2>
+    <div class="field"><span>Photos</span>
+      <div class="seg" id="scopeSeg">
+        <label><input type="radio" name="scope" value="active"><span id="scopeActive">This photo</span></label>
+        <label><input type="radio" name="scope" value="selected" checked><span id="scopeSel">Selected</span></label>
+        <label><input type="radio" name="scope" value="all"><span id="scopeAll">All</span></label>
+      </div>
+    </div>
+    <div class="field"><span>Size</span>
+      <select id="exSize" aria-label="Size">
+        <option value="0">Full size</option>
+        <option value="3840">Long edge 3840 px</option>
+        <option value="2560">Long edge 2560 px</option>
+        <option value="2048">Long edge 2048 px</option>
+        <option value="1600">Long edge 1600 px</option>
+        <option value="1080">Long edge 1080 px</option>
+      </select>
+    </div>
+    <div class="field"><span>Format</span>
+      <div class="seg">
+        <label><input type="radio" name="fmt" value="jpeg" checked><span>JPEG</span></label>
+        <label><input type="radio" name="fmt" value="webp"><span>WebP</span></label>
+        <label><input type="radio" name="fmt" value="png"><span>PNG</span></label>
+      </div>
+    </div>
+    <div class="sl" id="qualityRow"><label for="exQuality">Quality</label><span class="val" id="exQualityVal">92</span><input type="range" id="exQuality" min="60" max="100" step="1" value="92"></div>
+    <div class="field"><span>Add to file names</span><input type="text" id="exSuffix" value="-graded" maxlength="30" aria-label="File name suffix"></div>
+    <div class="progress" id="exProgress" hidden><i></i></div>
+    <p class="hint" id="exStatus" hidden></p>
+    <div class="dlg-foot">
+      <button class="btn" value="cancel" id="exCancel" type="submit">Close</button>
+      <button class="btn primary" id="exGo" type="button">Export</button>
+    </div>
+  </form>
+</dialog>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   Safelight Film Lab
+   Pipeline per pixel (GPU): decode sRGB → white balance + exposure → vignette →
+   halation/bloom (blurred highlight energy, tinted) → highlight shoulder →
+   levels, shadows/highlights, contrast → film LUT (3D) → saturation/vibrance →
+   fade → grain (resolution-aware) → dither.
+   ============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const clamp01 = x => clamp(x, 0, 1);
+const LW = [0.2126, 0.7152, 0.0722];
+const luma = c => c[0] * LW[0] + c[1] * LW[1] + c[2] * LW[2];
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const prefs = {
+  get(k, d) { try { const v = localStorage.getItem('safelight:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('safelight:' + k, JSON.stringify(v)); } catch {} }
+};
+function toast(msg, ms = 3200) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  $('#toasts').appendChild(t); setTimeout(() => t.remove(), ms);
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ---------------- colour maths ---------------- */
+const s2l = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+function hexToRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+const rgbToHex = c => '#' + c.map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+function rgbToLab(c) {
+  const R = s2l(c[0] / 255), G = s2l(c[1] / 255), B = s2l(c[2] / 255);
+  const X = (R * 0.4124564 + G * 0.3575761 + B * 0.1804375) / 0.95047;
+  const Y = R * 0.2126729 + G * 0.7151522 + B * 0.0721750;
+  const Z = (R * 0.0193339 + G * 0.1191920 + B * 0.9503041) / 1.08883;
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const fx = f(X), fy = f(Y), fz = f(Z);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function dE00(l1, l2) {
+  const [L1, a1, b1] = l1, [L2, a2, b2] = l2, rad = Math.PI / 180, deg = 180 / Math.PI, p7 = 6103515625;
+  const C1 = Math.hypot(a1, b1), C2 = Math.hypot(a2, b2), Cb7 = ((C1 + C2) / 2) ** 7;
+  const G = 0.5 * (1 - Math.sqrt(Cb7 / (Cb7 + p7)));
+  const a1p = (1 + G) * a1, a2p = (1 + G) * a2;
+  const C1p = Math.hypot(a1p, b1), C2p = Math.hypot(a2p, b2);
+  const hf = (b, a) => { if (b === 0 && a === 0) return 0; const x = Math.atan2(b, a) * deg; return x < 0 ? x + 360 : x; };
+  const h1p = hf(b1, a1p), h2p = hf(b2, a2p);
+  const dLp = L2 - L1, dCp = C2p - C1p;
+  let dhp = 0; if (C1p * C2p !== 0) { dhp = h2p - h1p; if (dhp > 180) dhp -= 360; else if (dhp < -180) dhp += 360; }
+  const dHp = 2 * Math.sqrt(C1p * C2p) * Math.sin(dhp * rad / 2);
+  const Lbp = (L1 + L2) / 2, Cbp = (C1p + C2p) / 2;
+  let hbp = h1p + h2p; if (C1p * C2p !== 0) { if (Math.abs(h1p - h2p) > 180) hbp += hbp < 360 ? 360 : -360; hbp /= 2; }
+  const T = 1 - 0.17 * Math.cos((hbp - 30) * rad) + 0.24 * Math.cos(2 * hbp * rad) + 0.32 * Math.cos((3 * hbp + 6) * rad) - 0.20 * Math.cos((4 * hbp - 63) * rad);
+  const dTh = 30 * Math.exp(-(((hbp - 275) / 25) ** 2));
+  const Cbp7 = Cbp ** 7, Rc = 2 * Math.sqrt(Cbp7 / (Cbp7 + p7));
+  const Sl = 1 + 0.015 * (Lbp - 50) ** 2 / Math.sqrt(20 + (Lbp - 50) ** 2), Sc = 1 + 0.045 * Cbp, Sh = 1 + 0.015 * Cbp * T;
+  const Rt = -Math.sin(2 * dTh * rad) * Rc;
+  return Math.sqrt((dLp / Sl) ** 2 + (dCp / Sc) ** 2 + (dHp / Sh) ** 2 + Rt * (dCp / Sc) * (dHp / Sh));
+}
+function rgb2hsv([r, g, b]) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn; let h = 0;
+  if (d > 1e-6) { if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4; h *= 60; if (h < 0) h += 360; }
+  return [h, mx > 0 ? d / mx : 0, mx];
+}
+function hsv2rgb(h, s, v) {
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c; let r, g, b;
+  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0]; else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c]; else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  return [r + m, g + m, b + m];
+}
+
+/* ---------------- film looks (baked to 3D LUTs) ---------------- */
+// Each look is a recipe: hue-selective shifts, saturation, optional B&W mix, S-curve, split tone, per-channel levels.
+const STOCKS = [
+  { id: 'none', name: 'No film', note: 'As shot' },
+  { id: 'dusk', name: 'Wonder Dusk', note: 'House look', look: { contrast: -0.06, sat: 0.94, lift: [0.035, 0.02, 0.035], gain: [1, 0.975, 0.95], shadowTint: [0.02, -0.012, 0.028], highlightTint: [0.022, 0.008, -0.014], hues: [{ hue: 100, width: 35, dh: -8, ds: -0.32 }, { hue: 185, width: 28, dh: 30, ds: -0.4 }, { hue: 215, width: 26, dh: 18, ds: -0.15 }, { hue: 25, width: 22, ds: -0.04, dv: 0.02 }] } },
+  { id: 'portra400', name: 'Portra 400', note: 'Soft, warm skin', look: { contrast: -0.16, sat: 0.92, lift: [0.03, 0.026, 0.022], gain: [1, 0.985, 0.955], gamma: [1.03, 1, 0.97], highlightTint: [0.015, 0.008, -0.015], hues: [{ hue: 105, width: 35, dh: -10, ds: -0.3 }, { hue: 28, width: 22, ds: -0.06, dv: 0.03 }, { hue: 215, width: 30, dh: -6, ds: -0.15 }] } },
+  { id: 'portra160', name: 'Portra 160', note: 'Paler, cooler', look: { contrast: -0.2, sat: 0.86, lift: [0.035, 0.035, 0.035], gain: [0.99, 0.99, 0.975], hues: [{ hue: 105, width: 35, dh: -6, ds: -0.3 }, { hue: 28, width: 22, ds: -0.1, dv: 0.04 }] } },
+  { id: 'gold200', name: 'Gold 200', note: 'Golden, nostalgic', look: { contrast: 0.05, sat: 1.04, lift: [0.035, 0.022, 0.0], gain: [1, 0.965, 0.86], highlightTint: [0.02, 0.012, -0.02], hues: [{ hue: 50, width: 25, ds: 0.15 }, { hue: 210, width: 30, ds: -0.12 }, { hue: 110, width: 30, dh: -12, ds: -0.1 }] } },
+  { id: 'ektar100', name: 'Ektar 100', note: 'Punchy, saturated', look: { contrast: 0.22, sat: 1.28, lift: [0.0, 0.0, 0.01], gain: [1, 0.99, 0.98], shadowTint: [-0.01, 0, 0.015], hues: [{ hue: 0, width: 20, ds: 0.12 }, { hue: 215, width: 25, dh: -6, ds: 0.15 }] } },
+  { id: 'pro400h', name: 'Pro 400H', note: 'Pastel, minty greens', look: { contrast: -0.15, sat: 0.86, lift: [0.02, 0.035, 0.04], gain: [0.975, 1, 0.99], shadowTint: [-0.01, 0.012, 0.015], hues: [{ hue: 105, width: 35, dh: 22, ds: -0.15 }, { hue: 25, width: 22, ds: -0.15, dv: 0.04 }, { hue: 210, width: 30, dh: -8 }] } },
+  { id: 'superia400', name: 'Superia 400', note: 'Green shadows', look: { contrast: 0.1, sat: 1.06, lift: [0.0, 0.02, 0.01], gain: [0.99, 1, 0.97], shadowTint: [-0.015, 0.02, 0.0], hues: [{ hue: 100, width: 30, dh: 8, ds: 0.06 }, { hue: 12, width: 18, dh: -5 }] } },
+  { id: 'cinestill800t', name: 'CineStill 800T', note: 'Tungsten, teal nights', look: { contrast: 0.06, sat: 0.95, lift: [0.0, 0.022, 0.04], gain: [0.95, 0.99, 1.03], shadowTint: [-0.015, 0.01, 0.025], highlightTint: [0.02, 0.0, -0.01], hues: [{ hue: 20, width: 22, ds: 0.06 }, { hue: 200, width: 30, dh: -10, ds: 0.1 }] } },
+  { id: 'e100', name: 'Ektachrome E100', note: 'Clean slide film', look: { contrast: 0.26, toe: 0.12, sat: 1.14, lift: [0, 0, 0.01], gain: [0.97, 1, 1.03], hues: [{ hue: 215, width: 30, ds: 0.15 }] } },
+  { id: 'velvia50', name: 'Velvia 50', note: 'Vivid landscapes', look: { contrast: 0.3, toe: 0.15, sat: 1.42, shadowTint: [0.012, -0.01, 0.01], hues: [{ hue: 105, width: 35, ds: 0.22 }, { hue: 215, width: 30, ds: 0.2 }, { hue: 5, width: 18, dh: -4 }] } },
+  { id: 'trix400', name: 'Tri-X 400', note: 'Gritty black & white', look: { bw: [0.3, 0.56, 0.14], contrast: 0.3, lift: [0.02, 0.02, 0.02] } },
+  { id: 'hp5', name: 'HP5 Plus', note: 'Soft black & white', look: { bw: [0.27, 0.6, 0.13], contrast: 0.05, lift: [0.045, 0.042, 0.04], highlightTint: [0.008, 0.004, -0.004] } },
+  { id: 'expired', name: 'Expired 1998', note: 'Faded, magenta cast', look: { contrast: -0.25, sat: 0.72, lift: [0.08, 0.055, 0.07], gain: [0.98, 0.93, 0.86], highlightTint: [0.02, -0.01, 0.0] } },
+];
+const STOCK_BY_ID = Object.fromEntries(STOCKS.map(s => [s.id, s]));
+function scurve(x, c, toe) {
+  let y = x;
+  if (c > 0) y = x + (x * x * (3 - 2 * x) - x) * c;
+  else if (c < 0) y = x + ((0.5 + (x - 0.5) * 0.6) - x) * (-c);
+  if (toe) y -= toe * y * (1 - y) * (1 - y) * 2;
+  return y;
+}
+function makeLook(p) {
+  const lift = p.lift || [0, 0, 0], gain = p.gain || [1, 1, 1], gamma = p.gamma || [1, 1, 1];
+  const con = p.contrast || 0, sat = p.sat ?? 1, hues = p.hues || [], sh = p.shadowTint || [0, 0, 0], hi = p.highlightTint || [0, 0, 0], bw = p.bw, toe = p.toe || 0;
+  return (r, g, b) => {
+    let c = [r, g, b];
+    if (hues.length) {
+      let [h, s, v] = rgb2hsv(c); let dh = 0, ds = 0, dv = 0;
+      const sw = clamp01((s - 0.04) / 0.26); // leave near-greys alone
+      for (const q of hues) {
+        const d = Math.abs(((h - q.hue + 540) % 360) - 180), w = Math.exp(-(d * d) / (2 * (q.width || 30) ** 2)) * sw;
+        dh += w * (q.dh || 0); ds += w * (q.ds || 0); dv += w * (q.dv || 0);
+      }
+      h = (h + dh + 360) % 360; s = clamp01(s * (1 + ds)); v = clamp01(v * (1 + dv));
+      c = hsv2rgb(h, s, v);
+    }
+    if (sat !== 1) { const L = luma(c); c = c.map(x => L + (x - L) * sat); }
+    if (bw) { const L = c[0] * bw[0] + c[1] * bw[1] + c[2] * bw[2]; c = [L, L, L]; }
+    c = c.map(x => scurve(clamp01(x), con, toe));
+    const L = luma(c), ws = (1 - L) ** 2, wh = L * L;
+    c = c.map((x, i) => x + sh[i] * ws + hi[i] * wh);
+    return c.map((x, i) => clamp01(lift[i] + Math.pow(clamp01(x), 1 / gamma[i]) * (gain[i] - lift[i])));
+  };
+}
+function bakeLut(fn, N = 33) {
+  const d = new Float32Array(N * N * N * 3); let i = 0;
+  for (let b = 0; b < N; b++) for (let g = 0; g < N; g++) for (let r = 0; r < N; r++) {
+    const o = fn(r / (N - 1), g / (N - 1), b / (N - 1)); d[i++] = o[0]; d[i++] = o[1]; d[i++] = o[2];
+  }
+  return d;
+}
+function lutLookup(entry, r, g, b) { // nearest-neighbour, for the small preview strips
+  const N = entry.N, q = v => clamp(Math.round(v * (N - 1)), 0, N - 1), k = entry.data instanceof Uint8Array ? 1 / 255 : 1;
+  const i = ((q(b) * N + q(g)) * N + q(r)) * 3; return [entry.data[i] * k, entry.data[i + 1] * k, entry.data[i + 2] * k];
+}
+function parseCube(text) {
+  let N = 0; const vals = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim(); if (!line || line[0] === '#') continue;
+    const parts = line.split(/\s+/), k = parts[0].toUpperCase();
+    if (k === 'LUT_3D_SIZE') N = +parts[1];
+    else if (k === 'LUT_1D_SIZE') throw new Error('1D LUTs aren’t supported. Use a 3D .cube file.');
+    else if (/^[A-Z_]/.test(k)) continue;
+    else if (parts.length >= 3) vals.push(+parts[0], +parts[1], +parts[2]);
+  }
+  if (!N || N < 2 || N > 129) throw new Error('This file has no LUT_3D_SIZE line.');
+  if (vals.length !== N * N * N * 3 || vals.some(v => !Number.isFinite(v))) throw new Error('The LUT data doesn’t match its size.');
+  return { N, data: Float32Array.from(vals) };
+}
+
+// HaldCLUT: a square image L³ pixels wide holding an L²-sized cube, red fastest, then green, then blue.
+// Resampled to 33³ (the usual .cube size) so a few hundred of them fit comfortably in the browser.
+async function parseHald(file) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' }); }
+  catch { throw new Error('This image couldn’t be opened.'); }
+  const W = bmp.width, L = Math.round(Math.cbrt(W));
+  if (bmp.height !== W || L * L * L !== W || L < 2) { bmp.close?.(); throw new Error('This image isn’t a HaldCLUT (they’re square, e.g. 512 or 1728 px).'); }
+  const c = document.createElement('canvas'); c.width = W; c.height = W;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bmp, 0, 0); bmp.close?.();
+  const src = x.getImageData(0, 0, W, W).data, Ns = L * L, Nt = Math.min(Ns, 33), out = new Uint8Array(Nt * Nt * Nt * 3);
+  const at = (r, g, b) => ((b * Ns + g) * Ns + r) * 4;
+  let o = 0;
+  for (let b = 0; b < Nt; b++) for (let g = 0; g < Nt; g++) for (let r = 0; r < Nt; r++) {
+    if (Nt === Ns) { const i = at(r, g, b); out[o++] = src[i]; out[o++] = src[i + 1]; out[o++] = src[i + 2]; continue; }
+    const fr = r * (Ns - 1) / (Nt - 1), fg = g * (Ns - 1) / (Nt - 1), fb = b * (Ns - 1) / (Nt - 1);
+    const r0 = Math.floor(fr), g0 = Math.floor(fg), b0 = Math.floor(fb), r1 = Math.min(r0 + 1, Ns - 1), g1 = Math.min(g0 + 1, Ns - 1), b1 = Math.min(b0 + 1, Ns - 1);
+    const tr = fr - r0, tg = fg - g0, tb = fb - b0;
+    for (let ch = 0; ch < 3; ch++) {
+      const v = (i0, i1, t) => src[i0 + ch] + (src[i1 + ch] - src[i0 + ch]) * t;
+      const c00 = v(at(r0, g0, b0), at(r1, g0, b0), tr), c10 = v(at(r0, g1, b0), at(r1, g1, b0), tr);
+      const c01 = v(at(r0, g0, b1), at(r1, g0, b1), tr), c11 = v(at(r0, g1, b1), at(r1, g1, b1), tr);
+      const c0 = c00 + (c10 - c00) * tg, c1 = c01 + (c11 - c01) * tg;
+      out[o++] = Math.round(c0 + (c1 - c0) * tb);
+    }
+  }
+  return { N: Nt, data: out };
+}
+
+/* ---------------- settings ---------------- */
+const pm = v => (v > 0 ? '+' : '') + Math.round(v);
+const GROUPS = [
+  { id: 'light', title: 'Light', sliders: [
+    ['exposure', 'Exposure', -3, 3, 0.05, 0, v => (v > 0 ? '+' : '') + v.toFixed(2) + ' EV'],
+    ['contrast', 'Contrast', -100, 100, 1, 0], ['highlights', 'Highlights', -100, 100, 1, 0], ['shadows', 'Shadows', -100, 100, 1, 0],
+    ['whites', 'Whites', -100, 100, 1, 0], ['blacks', 'Blacks', -100, 100, 1, 0]] },
+  { id: 'colour', title: 'Colour', sliders: [
+    ['temp', 'Temperature', -100, 100, 1, 0], ['tint', 'Tint', -100, 100, 1, 0], ['vibrance', 'Vibrance', -100, 100, 1, 0],
+    ['saturation', 'Saturation', -100, 100, 1, 0], ['fade', 'Fade', 0, 100, 1, 0]] },
+  { id: 'halation', title: 'Halation', note: 'The red-orange glow film gets around bright lights and edges.', sliders: [
+    ['halation', 'Amount', 0, 100, 1, 0], ['halRadius', 'Spread', 0, 100, 1, 40], ['halThreshold', 'Threshold', 0, 100, 1, 65],
+    ['halHue', 'Colour', 0, 60, 1, 10, v => v < 14 ? 'red' : v < 34 ? 'red-orange' : 'orange'], ['bloom', 'Bloom', 0, 100, 1, 0]] },
+  { id: 'grain', title: 'Grain', note: 'Grain only shows at its true size at 100%. Fit view softens it, as print would.', sliders: [
+    ['grain', 'Amount', 0, 100, 1, 0], ['grainSize', 'Size', 0, 100, 1, 35], ['grainRough', 'Roughness', 0, 100, 1, 40]] },
+  { id: 'vignette', title: 'Vignette', sliders: [
+    ['vignette', 'Amount', -100, 100, 1, 0], ['vigMid', 'Midpoint', 0, 100, 1, 50], ['vigFeather', 'Feather', 0, 100, 1, 50]] },
+];
+const SLIDERS = {}; GROUPS.forEach(g => g.sliders.forEach(s => SLIDERS[s[0]] = s));
+SLIDERS.strength = ['strength', 'Film strength', 0, 100, 1, 100, v => Math.round(v) + '%'];
+const DEFAULTS = { stock: 'none' };
+Object.values(SLIDERS).forEach(s => DEFAULTS[s[0]] = s[5]);
+const isEdited = s => Object.keys(DEFAULTS).some(k => s[k] !== DEFAULTS[k]);
+
+const BUILTIN_PRESETS = [
+  { name: 'Wonder Dusk', s: { stock: 'dusk', grain: 22, halation: 22, halRadius: 40, vignette: -12, fade: 6 } },
+  { name: 'Soft portrait', s: { stock: 'portra400', grain: 18, halation: 12, contrast: -5 } },
+  { name: 'Night lights', s: { stock: 'cinestill800t', halation: 70, halRadius: 45, halThreshold: 55, bloom: 12, grain: 35, grainSize: 45 } },
+  { name: 'Golden hour', s: { stock: 'gold200', grain: 28, halation: 18, vignette: -15, temp: 6 } },
+  { name: 'Street black & white', s: { stock: 'trix400', grain: 50, grainSize: 45, grainRough: 60, contrast: 10, vignette: -20 } },
+  { name: 'Clean slate', s: {} },
+];
+const BRAND = [
+  { name: 'Plum', hex: '#4E2A45' }, { name: 'Lilac', hex: '#C9A3BC' },
+  { name: 'Cinder', hex: '#201C18' }, { name: 'First Light', hex: '#F5F0E6' }
+];
+
+/* ---------------- state ---------------- */
+const state = {
+  photos: [], activeId: null, selected: new Set(), anchorId: null,
+  zoom: 'fit', pan: { x: 0.5, y: 0.5 }, before: false, picking: false,
+  autoSync: prefs.get('autoSync', false),
+  swatches: prefs.get('swatches', BRAND),
+  userPresets: prefs.get('presets', []),
+  showCmp: prefs.get('showCmp', true),
+  clip: null, palette: null, lutQuery: '', lutOpen: new Set(),
+};
+const byId = id => state.photos.find(p => p.id === id);
+const active = () => byId(state.activeId);
+const selectedPhotos = () => state.photos.filter(p => state.selected.has(p.id));
+
+/* ---------------- WebGL ---------------- */
+const canvas = $('#view');
+const gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true, antialias: false, alpha: false, premultipliedAlpha: false });
+let FLOAT_RT = false, MAXDIM = 4096, PM, PK, PB, DUMMY2D, DUMMY3D;
+const BG = [0x12 / 255, 0x12 / 255, 0x13 / 255];
+const VS = `#version 300 es
+in vec2 a_pos; out vec2 v_uv;
+void main(){ v_uv = a_pos*0.5+0.5; gl_Position = vec4(a_pos,0.,1.); }`;
+const COMMON = `#version 300 es
+precision highp float; precision highp sampler3D;
+const vec3 LW = vec3(0.2126,0.7152,0.0722);
+vec3 toLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(0.04045, c)); }
+vec3 toEnc(vec3 l){ l = max(l, 0.); return mix(l*12.92, 1.055*pow(l, vec3(1./2.4))-0.055, step(0.0031308, l)); }
+`;
+// Highlight energy. Clipped pixels are assumed to be far brighter than white, the way real light sources are.
+const FS_MASK = COMMON + `
+in vec2 v_uv; out vec4 o;
+uniform sampler2D u_src; uniform float u_lod; uniform vec2 u_texel; uniform vec3 u_gain; uniform float u_thr, u_scale;
+vec3 expand(vec3 c){ float m = max(max(c.r,c.g),c.b); return toLin(c)*(1.0 + 7.0*smoothstep(0.9, 1.0, m)); }
+void main(){
+  vec2 img = vec2(v_uv.x, 1.0-v_uv.y);
+  vec2 d = u_texel*exp2(u_lod)*0.5;
+  vec3 a = expand(textureLod(u_src, img+vec2(-d.x,-d.y), u_lod).rgb) + expand(textureLod(u_src, img+vec2(d.x,-d.y), u_lod).rgb)
+         + expand(textureLod(u_src, img+vec2(-d.x,d.y), u_lod).rgb) + expand(textureLod(u_src, img+vec2(d.x,d.y), u_lod).rgb);
+  a *= 0.25*u_gain;
+  float L = dot(a, LW), e = max(L-u_thr, 0.);
+  o = vec4((L > 1e-5 ? a*(e/L) : vec3(0))*u_scale, 1.);
+}`;
+const FS_BLUR = COMMON + `
+in vec2 v_uv; out vec4 o;
+uniform sampler2D u_tex; uniform vec2 u_dir; uniform float u_sigma, u_step, u_lod;
+void main(){
+  vec3 acc = vec3(0); float ws = 0.;
+  for(int i=-16;i<=16;i++){ float x = float(i)*u_step; float w = exp(-0.5*x*x/(u_sigma*u_sigma));
+    acc += textureLod(u_tex, v_uv+u_dir*x, u_lod).rgb*w; ws += w; }
+  o = vec4(acc/ws, 1.);
+}`;
+const FS_MAIN = COMMON + `
+in vec2 v_uv; out vec4 o;
+uniform sampler2D u_src, u_glow; uniform sampler3D u_lut;
+uniform vec4 u_view; uniform vec3 u_bg; uniform bool u_bypass;
+uniform vec3 u_gain;
+uniform float u_contrast, u_highlights, u_shadows, u_whites, u_blacks;
+uniform bool u_hasLut; uniform float u_lutMix, u_lutSize;
+uniform float u_sat, u_vib, u_fade;
+uniform bool u_hasGlow; uniform float u_hal, u_bloom, u_glowScale; uniform vec3 u_halTint;
+uniform float u_grain, u_grainCell, u_grainRough, u_grainFoot, u_seed; uniform vec2 u_fullRes;
+uniform float u_vig, u_vigMid, u_vigFeather, u_dither;
+float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx+33.33); return fract((p3.x+p3.y)*p3.z); }
+float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.-2.*f);
+  float a = hash12(i), b = hash12(i+vec2(1,0)), c = hash12(i+vec2(0,1)), d = hash12(i+vec2(1,1));
+  return mix(mix(a,b,u.x), mix(c,d,u.x), u.y)*2.-1.; }
+void main(){
+  vec2 img = u_view.xy + vec2(v_uv.x, 1.0-v_uv.y)*u_view.zw;
+  if(img.x<0.||img.y<0.||img.x>1.||img.y>1.){ o = vec4(u_bg,1.); return; }
+  vec3 src = texture(u_src, img).rgb;
+  if(u_bypass){ o = vec4(src,1.); return; }
+  vec3 lin = toLin(src)*u_gain;
+  if(u_vig != 0.){ float r = length((img-0.5)*2.0)*0.70710678; lin *= max(0., 1.0 + u_vig*smoothstep(u_vigMid, u_vigMid+u_vigFeather, r)); }
+  if(u_hasGlow){
+    vec2 g = vec2(img.x, 1.0-img.y);
+    vec3 g0 = texture(u_glow, g).rgb*u_glowScale, g1 = textureLod(u_glow, g, 2.5).rgb*u_glowScale;
+    // Halation re-exposes the red layer from the film base, so it follows highlight energy, not the light's own colour.
+    float Lc = dot(lin, LW), h = dot(g0*0.6 + g1*0.4, LW);
+    lin += h*u_halTint*u_hal/(1.0 + Lc*3.0) + g1*u_bloom;
+  }
+  vec3 e = toEnc(lin);
+  { const float k = 0.98; vec3 t = max(e-k, 0.); e = min(e, vec3(k)) + (1.-k)*tanh(t/(1.-k)); }
+  float bp = -u_blacks*0.08, wp = 1.0 - u_whites*0.15; e = (e-bp)/(wp-bp);
+  float L = dot(clamp(e,0.,1.), LW);
+  float Ls = L + u_shadows*0.25*L*(1.-L)*(1.-L)*6.75 + u_highlights*0.25*L*L*(1.-L)*6.75;
+  if(L > 1e-3) e *= clamp(Ls/L, 0., 4.); else e += Ls-L;
+  vec3 x = clamp(e,0.,1.);
+  if(u_contrast > 0.) e = mix(e, x*x*(3.-2.*x), u_contrast); else e = mix(e, 0.5+(e-0.5)*0.55, -u_contrast);
+  if(u_hasLut){ vec3 c = clamp(e,0.,1.); e = mix(e, texture(u_lut, c*((u_lutSize-1.)/u_lutSize) + 0.5/u_lutSize).rgb, u_lutMix); }
+  L = dot(e, LW);
+  float mx = max(e.r, max(e.g, e.b)), mn = min(e.r, min(e.g, e.b));
+  e = L + (e-L)*max(0., 1. + u_sat + u_vib*(1.-smoothstep(0., 0.7, mx-mn)));
+  e = mix(vec3(u_fade*0.12), vec3(1.-u_fade*0.05), e);
+  if(u_grain > 0.){
+    vec2 p = img*u_fullRes/u_grainCell + u_seed*vec2(13.71, 71.37);
+    float n = vnoise(p)*0.7 + vnoise(p*2.17+vec2(5.2,1.3))*0.45;
+    n = mix(n, hash12(floor(p*1.9))*2.-1., u_grainRough*0.6);
+    vec3 nc = vec3(n) + 0.22*vec3(vnoise(p*1.3+31.), vnoise(p*1.3+57.), vnoise(p*1.3+91.));
+    float Lw = clamp(dot(clamp(e,0.,1.), LW), 0., 1.);
+    e += nc*(0.3 + 2.8*Lw*(1.-Lw))*u_grain*0.16/max(1., u_grainFoot);
+  }
+  e += (hash12(gl_FragCoord.xy + fract(u_seed*0.137)*97.) - 0.5)/255.*u_dither;
+  o = vec4(clamp(e,0.,1.), 1.);
+}`;
+
+function compile(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+function program(fs) {
+  const p = gl.createProgram(); gl.attachShader(p, compile(gl.VERTEX_SHADER, VS)); gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+  gl.bindAttribLocation(p, 0, 'a_pos'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name] = gl.getUniformLocation(p, info.name); }
+  return { p, u };
+}
+function texParams(target, mips, nearest) {
+  const f = nearest ? gl.NEAREST : gl.LINEAR;
+  gl.texParameteri(target, gl.TEXTURE_MIN_FILTER, mips ? gl.LINEAR_MIPMAP_LINEAR : f);
+  gl.texParameteri(target, gl.TEXTURE_MAG_FILTER, f);
+  gl.texParameteri(target, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(target, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  if (target === gl.TEXTURE_3D) gl.texParameteri(target, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+}
+function texFromImage(img) {
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+  gl.generateMipmap(gl.TEXTURE_2D); texParams(gl.TEXTURE_2D, true); return t;
+}
+function makeRT(w, h, { float = false, mips = false } = {}) {
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  const levels = mips ? Math.floor(Math.log2(Math.max(w, h))) + 1 : 1;
+  gl.texStorage2D(gl.TEXTURE_2D, levels, float ? gl.RGBA16F : gl.RGBA8, w, h); texParams(gl.TEXTURE_2D, mips);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+  const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return { t, fb, w, h, ok };
+}
+function freeRT(rt) { if (!rt) return; gl.deleteTexture(rt.t); gl.deleteFramebuffer(rt.fb); }
+
+function initGL() {
+  FLOAT_RT = !!gl.getExtension('EXT_color_buffer_float');
+  if (FLOAT_RT) { const test = makeRT(4, 4, { float: true, mips: true }); FLOAT_RT = test.ok; freeRT(test); }
+  MAXDIM = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));
+  PM = program(FS_MAIN); PK = program(FS_MASK); PB = program(FS_BLUR);
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  DUMMY2D = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, DUMMY2D);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255])); texParams(gl.TEXTURE_2D, false);
+  DUMMY3D = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, DUMMY3D);
+  gl.texImage3D(gl.TEXTURE_3D, 0, gl.RGBA8, 1, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255])); texParams(gl.TEXTURE_3D, false);
+}
+
+/* Film pack: the RawTherapee Film Simulation Collection (2015-09-20) by Pat David, Pavlov Dmitry and Michael Ezra,
+   CC BY-SA 4.0, resampled to 33³. Each brand is one PNG in film-pack/, 33 rows per look, fetched the first time it's needed. */
+const PACK = [{"g":"Colour / Agfa","s":"colour-agfa","n":["Precisa 100","Ultra Color 100","Vista 200"]},{"g":"Colour / CreativePack 1","s":"colour-creativepack-1","n":["Anime","BleachBypass1","BleachBypass2","BleachBypass3","BleachBypass4","CandleLight","ColorNegative","CrispWarm","CrispWinter","DropBlues","EdgyEmber","FallColors","FoggyNight","FuturisticBleak1","FuturisticBleak2","FuturisticBleak3","FuturisticBleak4","HorrorBlue","LateSunset","Moonlight","NightFromDay","RedBlueYellow","Smokey","SoftWarming","TealMagentaGold","TealOrange1","TealOrange2","TealOrange3","TealOrange","TensionGreen1","TensionGreen2","TensionGreen3","TensionGreen4"]},{"g":"Colour / Fuji","s":"colour-fuji","n":["160C −","160C","160C +","160C ++","400H −","400H","400H +","400H ++","800Z −","800Z","800Z +","800Z ++","Astia 100 Generic","Astia 100F","FP-100c −−","FP-100c −","FP-100c","FP-100c 4 Alt","FP-100c +","FP-100c ++","FP-100c 7 ++ Alt","FP-100c +++","FP-100c Cool −−","FP-100c Cool −","FP-100c Cool","FP-100c Cool +","FP-100c Cool ++","FP-100c Negative −−","FP-100c Negative −","FP-100c Negative","FP-100c Negative +","FP-100c Negative ++","FP-100c Negative 6 ++ Alt","FP-100c Negative +++","Provia 100 Generic","Provia 100F","Provia 400F","Provia 400X","Sensia 100","Superia 100 −","Superia 100","Superia 100 +","Superia 100 ++","Superia 200 XPRO","Superia 200","Superia 400 −","Superia 400","Superia 400 +","Superia 400 ++","Superia 800 −","Superia 800","Superia 800 +","Superia 800 ++","Superia 1600 −","Superia 1600","Superia 1600 +","Superia 1600 ++","Superia HG 1600","Superia Reala 100","Superia X-Tra 800","Velvia 50","Velvia 100 Generic"]},{"g":"Colour / Kodak","s":"colour-kodak","n":["E-100 GX Ektachrome 100","Ektachrome 100 VS Generic","Ektachrome 100 VS","Ektar 100","Elite 100 XPRO","Elite Chrome 200","Elite Chrome 400","Elite Color 200","Elite Color 400","Elite ExtraColor 100","Kodachrome 25","Kodachrome 64 Generic","Kodachrome 64","Kodachrome 200","Portra 160 −","Portra 160","Portra 160 +","Portra 160 ++","Portra 160 NC −","Portra 160 NC","Portra 160 NC +","Portra 160 NC ++","Portra 160 VC −","Portra 160 VC","Portra 160 VC +","Portra 160 VC ++","Portra 400 −","Portra 400","Portra 400 +","Portra 400 ++","Portra 400 NC −","Portra 400 NC","Portra 400 NC +","Portra 400 NC ++","Portra 400 UC −","Portra 400 UC","Portra 400 UC +","Portra 400 UC ++","Portra 400 VC −","Portra 400 VC","Portra 400 VC +","Portra 400 VC ++","Portra 800 −","Portra 800","Portra 800 +","Portra 800 ++","Portra 800 HC"]},{"g":"Colour / Lomography","s":"colour-lomography","n":["Redscale 100","X-Pro Slide 200"]},{"g":"Colour / Polaroid","s":"colour-polaroid","n":["669 −−","669 −","669","669 +","669 ++","669 +++","669 Cold −−","669 Cold −","669 Cold","669 Cold +","690 −−","690 −","690","690 +","690 ++","690 Cold −−","690 Cold −","690 Cold","690 Cold +","690 Cold ++","690 Warm −−","690 Warm −","690 Warm","690 Warm +","690 Warm ++","Polachrome","PX-70 −−","PX-70 −","PX-70","PX-70 +","PX-70 ++","PX-70 +++","PX-70 Cold −−","PX-70 Cold −","PX-70 Cold","PX-70 Cold +","PX-70 Cold ++","PX-70 Warm −−","PX-70 Warm −","PX-70 Warm","PX-70 Warm +","PX-70 Warm ++","PX-100UV+ Cold −−","PX-100UV+ Cold −","PX-100UV+ Cold","PX-100UV+ Cold +","PX-100UV+ Cold ++","PX-100UV+ Cold +++","PX-100UV+ Warm −−","PX-100UV+ Warm −","PX-100UV+ Warm","PX-100UV+ Warm +","PX-100UV+ Warm ++","PX-100UV+ Warm +++","PX-680 −−","PX-680 −","PX-680","PX-680 +","PX-680 ++","PX-680 Cold −−","PX-680 Cold −","PX-680 Cold","PX-680 Cold +","PX-680 Cold ++","PX-680 Cold 6 ++ Alt","PX-680 Warm −−","PX-680 Warm −","PX-680 Warm","PX-680 Warm +","PX-680 Warm ++","Time Zero (Expired) −−−","Time Zero (Expired) −−","Time Zero (Expired) −","Time Zero (Expired)","Time Zero (Expired) +","Time Zero (Expired) ++","Time Zero (Expired) Cold −−−","Time Zero (Expired) Cold −−","Time Zero (Expired) Cold −","Time Zero (Expired) Cold"]},{"g":"Black and White / Agfa","s":"black-and-white-agfa","n":["APX 25","APX 100"]},{"g":"Black and White / Fuji","s":"black-and-white-fuji","n":["FP-3000b −−","FP-3000b −","FP-3000b","FP-3000b +","FP-3000b ++","FP-3000b +++","FP-3000b HC","FP-3000b Negative −−","FP-3000b Negative −","FP-3000b Negative","FP-3000b Negative +","FP-3000b Negative ++","FP-3000b Negative +++","FP-3000b Negative Early","Neopan 1600 −","Neopan 1600","Neopan 1600 +","Neopan 1600 ++","Neopan Acros 100"]},{"g":"Black and White / Ilford","s":"black-and-white-ilford","n":["Delta 100","Delta 400","Delta 3200 −","Delta 3200","Delta 3200 +","Delta 3200 ++","FP4 Plus 125","HP5 −","HP5","HP5 +","HP5 ++","HP5 Plus 400","HPS 800","Pan F Plus 50","XP2"]},{"g":"Black and White / Kodak","s":"black-and-white-kodak","n":["BW 400 CN","HIE (HS Infra)","T-Max 100","T-Max 400","TMAX 3200 −","TMAX 3200","TMAX 3200 3 Alt","TMAX 3200 +","TMAX 3200 ++","TRI-X 400 −","TRI-X 400","TRI-X 400 3 Alt","TRI-X 400 +","TRI-X 400 ++"]},{"g":"Black and White / Polaroid","s":"black-and-white-polaroid","n":["664","665 −−","665 −","665","665 +","665 ++","665 Negative −","665 Negative","665 Negative +","665 Negative HC","667","672"]},{"g":"Black and White / Rollei","s":"black-and-white-rollei","n":["IR 400","Ortho 25","Retro 80s","Retro 100 Tonal"]}];
+const PACK_BY_ID = {};
+PACK.forEach(g => g.n.forEach((name, i) => { PACK_BY_ID[`pack:${g.s}:${i}`] = { name, group: g.g, slug: g.s }; }));
+const PACK_TOTAL = Object.keys(PACK_BY_ID).length;
+const packLoads = new Map();
+function loadPackGroup(slug) {
+  if (packLoads.has(slug)) return packLoads.get(slug);
+  const g = PACK.find(x => x.s === slug); if (!g) return Promise.resolve();
+  const pr = (async () => {
+    const res = await fetch(`film-pack/${slug}.png`); if (!res.ok) throw new Error('HTTP ' + res.status);
+    const bmp = await createImageBitmap(await res.blob(), { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+    const c = document.createElement('canvas'); c.width = bmp.width; c.height = bmp.height;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(bmp, 0, 0); bmp.close?.();
+    const px = x.getImageData(0, 0, c.width, c.height).data, N = 33, per = N * N * N;
+    g.n.forEach((name, i) => {
+      const data = new Uint8Array(per * 3), base = i * per * 4;
+      for (let k = 0; k < per; k++) { data[k * 3] = px[base + k * 4]; data[k * 3 + 1] = px[base + k * 4 + 1]; data[k * 3 + 2] = px[base + k * 4 + 2]; }
+      const id = `pack:${slug}:${i}`; LUTS.set(id, { id, name, group: g.g, N, data, pack: true });
+    });
+    refreshPackStrips(slug);
+    const ps = state.photos.filter(p => p.settings.stock.startsWith(`pack:${slug}:`));
+    if (ps.length) { requestDraw(); queueThumbs(ps); schedulePalette(); }
+  })();
+  pr.catch(() => { packLoads.delete(slug); toast(`Couldn\u2019t load the ${g.g} looks. Check your connection and try again.`, 5000); });
+  packLoads.set(slug, pr); return pr;
+}
+function ensureLut(id) { return id && id.startsWith('pack:') ? loadPackGroup(id.split(':')[1]).catch(() => {}) : Promise.resolve(); }
+function lutName(id) { const pk = PACK_BY_ID[id]; return STOCK_BY_ID[id]?.name || (pk ? `${pk.group.split(' / ').pop()} ${pk.name}` : null) || LUTS.get(id)?.name || null; }
+
+/* LUT registry: built-in looks bake on first use; imported .cube files are kept in this browser. */
+const LUTS = new Map();
+function lutEntry(id) {
+  if (!id || id === 'none') return null;
+  let e = LUTS.get(id);
+  if (!e && id.startsWith('pack:')) { loadPackGroup(id.split(':')[1]); return null; }
+  if (!e && STOCK_BY_ID[id]?.look) { e = { id, N: 33, data: bakeLut(makeLook(STOCK_BY_ID[id].look), 33) }; LUTS.set(id, e); }
+  return e || null;
+}
+function getLut(id) {
+  const e = lutEntry(id); if (!e) return null;
+  if (!e.tex) {
+    e.tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_3D, e.tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    const u8 = e.data instanceof Uint8Array; // HaldCLUTs are kept as 8-bit, .cube files as float
+    gl.texImage3D(gl.TEXTURE_3D, 0, u8 ? gl.RGB8 : gl.RGB16F, e.N, e.N, e.N, 0, gl.RGB, u8 ? gl.UNSIGNED_BYTE : gl.FLOAT, e.data);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    texParams(gl.TEXTURE_3D, false);
+  }
+  return e;
+}
+
+const glowCache = new Map();
+function glowBufs(w, h) {
+  const k = w + 'x' + h; let g = glowCache.get(k);
+  if (!g) {
+    if (glowCache.size > 6) { for (const [kk, gg] of glowCache) { freeRT(gg.mask); freeRT(gg.b1); freeRT(gg.b2); glowCache.delete(kk); break; } }
+    const o = { float: FLOAT_RT, mips: true };
+    g = { mask: makeRT(w * 2, h * 2, o), b1: makeRT(w, h, o), b2: makeRT(w, h, o) }; glowCache.set(k, g);
+  }
+  return g;
+}
+function wbGain(s) {
+  const t = s.temp / 100, m = s.tint / 100;
+  const g = [2 ** (0.32 * t), 2 ** (-0.22 * m), 2 ** (-0.32 * t)], L = luma(g), ev = 2 ** s.exposure;
+  return g.map(x => x / L * ev);
+}
+function draw() { gl.drawArrays(gl.TRIANGLES, 0, 3); }
+function computeGlow(o) {
+  const s = o.s, short = o.glowShort || 384, asp = o.fullW / o.fullH;
+  const w = asp >= 1 ? Math.round(short * asp) : short, h = asp >= 1 ? short : Math.round(short / asp);
+  const g = glowBufs(w, h);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, g.mask.fb); gl.viewport(0, 0, w * 2, h * 2);
+  gl.useProgram(PK.p);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(PK.u.u_src, 0);
+  gl.uniform1f(PK.u.u_lod, Math.max(0, Math.log2(Math.min(o.texW, o.texH) / (2 * Math.min(w, h))) - 1));
+  gl.uniform2f(PK.u.u_texel, 1 / o.texW, 1 / o.texH);
+  gl.uniform3f(PK.u.u_gain, ...wbGain(s));
+  gl.uniform1f(PK.u.u_thr, 0.3 + 1.5 * s.halThreshold / 100);
+  gl.uniform1f(PK.u.u_scale, FLOAT_RT ? 1 : 0.125);
+  draw();
+  gl.bindTexture(gl.TEXTURE_2D, g.mask.t); gl.generateMipmap(gl.TEXTURE_2D);
+  const pct = 0.25 * Math.pow(24, s.halRadius / 100);
+  const sigma = Math.max(0.35, pct / 100 * Math.min(w, h)), step = Math.max(1, 3 * sigma / 16);
+  gl.useProgram(PB.p); gl.uniform1i(PB.u.u_tex, 0); gl.uniform1f(PB.u.u_sigma, sigma); gl.uniform1f(PB.u.u_step, step);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, g.b1.fb); gl.viewport(0, 0, w, h);
+  gl.bindTexture(gl.TEXTURE_2D, g.mask.t); gl.uniform2f(PB.u.u_dir, 1 / w, 0); gl.uniform1f(PB.u.u_lod, 1 + Math.log2(step)); draw();
+  gl.bindTexture(gl.TEXTURE_2D, g.b1.t); gl.generateMipmap(gl.TEXTURE_2D);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, g.b2.fb);
+  gl.uniform2f(PB.u.u_dir, 0, 1 / h); gl.uniform1f(PB.u.u_lod, Math.log2(step)); draw();
+  gl.bindTexture(gl.TEXTURE_2D, g.b2.t); gl.generateMipmap(gl.TEXTURE_2D);
+  return g.b2.t;
+}
+/* o: {tex, texW, texH, fullW, fullH, s, seed, outW, outH, view:[x,y,w,h], fb, bypass, glowShort, dither} */
+function render(o) {
+  const s = o.s, bypass = !!o.bypass;
+  const glowTex = !bypass && (s.halation > 0 || s.bloom > 0) ? computeGlow(o) : null;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, o.fb || null); gl.viewport(0, 0, o.outW, o.outH);
+  const u = PM.u; gl.useProgram(PM.p);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(u.u_src, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, glowTex || DUMMY2D); gl.uniform1i(u.u_glow, 1);
+  const lut = bypass ? null : getLut(s.stock);
+  gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_3D, lut ? lut.tex : DUMMY3D); gl.uniform1i(u.u_lut, 2);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.uniform4f(u.u_view, ...o.view); gl.uniform3f(u.u_bg, ...BG); gl.uniform1i(u.u_bypass, bypass ? 1 : 0);
+  gl.uniform3f(u.u_gain, ...wbGain(s));
+  gl.uniform1f(u.u_contrast, s.contrast / 100); gl.uniform1f(u.u_highlights, s.highlights / 100); gl.uniform1f(u.u_shadows, s.shadows / 100);
+  gl.uniform1f(u.u_whites, s.whites / 100); gl.uniform1f(u.u_blacks, s.blacks / 100);
+  gl.uniform1i(u.u_hasLut, lut ? 1 : 0); gl.uniform1f(u.u_lutMix, s.strength / 100); gl.uniform1f(u.u_lutSize, lut ? lut.N : 1);
+  gl.uniform1f(u.u_sat, s.saturation / 100); gl.uniform1f(u.u_vib, s.vibrance / 100); gl.uniform1f(u.u_fade, s.fade / 100);
+  gl.uniform1i(u.u_hasGlow, glowTex ? 1 : 0); gl.uniform1f(u.u_hal, s.halation / 100 * 1.5); gl.uniform1f(u.u_bloom, s.bloom / 100 * 0.8);
+  gl.uniform1f(u.u_glowScale, FLOAT_RT ? 1 : 8); gl.uniform3f(u.u_halTint, ...hsv2rgb(s.halHue, 1, 1));
+  const short = Math.min(o.fullW, o.fullH), cell = short / 1500 * (0.5 + 2.5 * Math.pow(s.grainSize / 100, 1.5));
+  gl.uniform1f(u.u_grain, s.grain / 100); gl.uniform1f(u.u_grainCell, cell); gl.uniform1f(u.u_grainRough, s.grainRough / 100);
+  gl.uniform1f(u.u_grainFoot, (o.fullW * o.view[2] / o.outW) / cell); gl.uniform1f(u.u_seed, o.seed || 1);
+  gl.uniform2f(u.u_fullRes, o.fullW, o.fullH);
+  gl.uniform1f(u.u_vig, s.vignette / 100); gl.uniform1f(u.u_vigMid, 0.15 + 0.8 * s.vigMid / 100); gl.uniform1f(u.u_vigFeather, 0.05 + 0.9 * s.vigFeather / 100);
+  gl.uniform1f(u.u_dither, o.dither === 0 ? 0 : 1);
+  draw();
+}
+function readRT(rt) { // returns top-down RGBA
+  const { w, h } = rt, buf = new Uint8Array(w * h * 4);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, rt.fb); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  const out = new Uint8ClampedArray(w * h * 4), row = w * 4;
+  for (let y = 0; y < h; y++) out.set(buf.subarray((h - 1 - y) * row, (h - y) * row), y * row);
+  return out;
+}
+function renderToPixels(p, tex, texW, texH, outW, outH, extra = {}) {
+  const rt = makeRT(outW, outH);
+  render({ tex, texW, texH, fullW: p.w, fullH: p.h, s: p.settings, seed: p.seed, outW, outH, view: [0, 0, 1, 1], fb: rt.fb, glowShort: 96, ...extra });
+  const px = readRT(rt); freeRT(rt); return px;
+}
+
+/* ---------------- photos ---------------- */
+const PREVIEW_EDGE = () => Math.min(2560, MAXDIM);
+const previewLRU = [];
+let decodeChain = Promise.resolve();
+function newPhoto(rec) {
+  return { id: rec.id || uid(), name: rec.name || 'Untitled', blob: rec.blob, settings: { ...DEFAULTS, ...(rec.settings || {}) },
+    seed: rec.seed || (1 + Math.floor(Math.random() * 900)), sample: !!rec.sample, w: 0, h: 0, ready: false,
+    thumb: null, thumbTex: null, previewTex: null, pw: 0, ph: 0, fullTex: null, fw: 0, fh: 0, el: null, cv: null };
+}
+function addPhotos(recs, { persist = true } = {}) {
+  const added = [];
+  for (const r of recs) { const p = newPhoto(r); state.photos.push(p); added.push(p); buildFrame(p); if (persist) persistSoon(p); }
+  for (const p of added) decodeChain = decodeChain.then(() => decodePhoto(p));
+  if (!state.activeId && added[0]) { state.activeId = added[0].id; state.selected = new Set([added[0].id]); state.anchorId = added[0].id; }
+  refreshLibraryUI();
+  return added;
+}
+async function decodePhoto(p) {
+  if (!byId(p.id)) return;
+  let bmp;
+  try { bmp = await createImageBitmap(p.blob); }
+  catch { toast(`Couldn’t open “${p.name}”. Try JPEG, PNG or WebP.`); removePhotos([p.id], true); return; }
+  p.w = bmp.width; p.h = bmp.height;
+  const sc = Math.min(1, 320 / Math.max(p.w, p.h));
+  p.thumb = await createImageBitmap(bmp, { resizeWidth: Math.max(1, Math.round(p.w * sc)), resizeHeight: Math.max(1, Math.round(p.h * sc)), resizeQuality: 'high' });
+  if (p.id === state.activeId && !p.previewTex) await makePreview(p, bmp);
+  bmp.close?.();
+  p.ready = true;
+  if (p.cv) { p.cv.width = p.thumb.width; p.cv.height = p.thumb.height; p.el.querySelector('.pending')?.remove(); }
+  renderThumb(p);
+  if (p.id === state.activeId) { refreshStageInfo(); requestDraw(); schedulePalette(); }
+}
+async function makePreview(p, bmpIn) {
+  const bmp = bmpIn || await createImageBitmap(p.blob);
+  const sc = Math.min(1, PREVIEW_EDGE() / Math.max(bmp.width, bmp.height));
+  const pv = sc < 1 ? await createImageBitmap(bmp, { resizeWidth: Math.round(bmp.width * sc), resizeHeight: Math.round(bmp.height * sc), resizeQuality: 'high' }) : bmp;
+  if (!byId(p.id)) return;
+  if (p.previewTex) gl.deleteTexture(p.previewTex);
+  p.previewTex = texFromImage(pv); p.pw = pv.width; p.ph = pv.height;
+  if (pv !== bmp) pv.close?.();
+  if (!bmpIn) bmp.close?.();
+  const i = previewLRU.indexOf(p); if (i >= 0) previewLRU.splice(i, 1); previewLRU.push(p);
+  while (previewLRU.length > 4) { const old = previewLRU.shift(); if (old !== active() && old.previewTex) { gl.deleteTexture(old.previewTex); old.previewTex = null; } }
+}
+let fullFor = null;
+async function ensureFull(p) {
+  if (p.fullTex) return;
+  if (fullFor && fullFor !== p && fullFor.fullTex) { gl.deleteTexture(fullFor.fullTex); fullFor.fullTex = null; }
+  fullFor = p; setBusy('Loading full size…');
+  try {
+    const bmp = await createImageBitmap(p.blob);
+    const sc = Math.min(1, MAXDIM / Math.max(bmp.width, bmp.height));
+    const img = sc < 1 ? await createImageBitmap(bmp, { resizeWidth: Math.floor(bmp.width * sc), resizeHeight: Math.floor(bmp.height * sc), resizeQuality: 'high' }) : bmp;
+    if (fullFor === p) { p.fullTex = texFromImage(img); p.fw = img.width; p.fh = img.height; }
+    if (img !== bmp) img.close?.(); bmp.close?.();
+  } finally { setBusy(null); requestDraw(); }
+}
+function removePhotos(ids, quiet) {
+  for (const id of ids) {
+    const p = byId(id); if (!p) continue;
+    [p.thumbTex, p.previewTex, p.fullTex].forEach(t => t && gl.deleteTexture(t));
+    p.thumb?.close?.(); p.el?.remove();
+    state.photos.splice(state.photos.indexOf(p), 1); state.selected.delete(id);
+    const i = previewLRU.indexOf(p); if (i >= 0) previewLRU.splice(i, 1);
+    DB.del('photos', id);
+  }
+  if (!byId(state.activeId)) {
+    const next = state.photos[0]; state.activeId = next?.id || null;
+    state.selected = new Set(next ? [next.id] : []); if (next) setActive(next.id, { keepSelection: true });
+  }
+  refreshLibraryUI(); requestDraw(); schedulePalette();
+  if (!quiet) toast(ids.length === 1 ? 'Removed 1 photo' : `Removed ${ids.length} photos`);
+}
+
+/* ---------------- persistence (IndexedDB, this browser only) ---------------- */
+const DB = {
+  db: null,
+  open() {
+    return new Promise(res => {
+      try {
+        const r = indexedDB.open('safelight', 1);
+        r.onupgradeneeded = () => { const d = r.result; d.createObjectStore('photos', { keyPath: 'id' }); d.createObjectStore('luts', { keyPath: 'id' }); };
+        r.onsuccess = () => { this.db = r.result; res(true); }; r.onerror = () => res(false); r.onblocked = () => res(false);
+      } catch { res(false); }
+    });
+  },
+  tx(store, mode, fn) {
+    return new Promise(res => {
+      if (!this.db) return res(null);
+      try { const t = this.db.transaction(store, mode), req = fn(t.objectStore(store)); t.oncomplete = () => res(req ? req.result : null); t.onerror = t.onabort = () => res(null); }
+      catch { res(null); }
+    });
+  },
+  all(s) { return this.tx(s, 'readonly', st => st.getAll()); },
+  put(s, v) { return this.tx(s, 'readwrite', st => st.put(v)); },
+  del(s, k) { return this.tx(s, 'readwrite', st => st.delete(k)); },
+};
+const dirty = new Set(); let persistTimer = 0;
+function persistSoon(p) {
+  dirty.add(p.id); clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    for (const id of dirty) { const q = byId(id); if (q) DB.put('photos', { id: q.id, name: q.name, blob: q.blob, settings: q.settings, seed: q.seed, sample: q.sample, order: state.photos.indexOf(q) }); }
+    dirty.clear();
+  }, 500);
+}
+
+/* ---------------- drawing ---------------- */
+let drawQueued = false;
+function requestDraw() { if (!drawQueued) { drawQueued = true; requestAnimationFrame(() => { drawQueued = false; drawStage(); }); } }
+function resizeCanvas() {
+  const r = canvas.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+}
+function viewRect(p, W, H) {
+  let scale, cx = 0.5, cy = 0.5;
+  if (state.zoom === 'fit') scale = Math.min(W / p.w, H / p.h) * 0.96; else scale = 1;
+  const vw = W / (p.w * scale), vh = H / (p.h * scale);
+  if (state.zoom !== 'fit') {
+    cx = vw >= 1 ? 0.5 : clamp(state.pan.x, vw / 2, 1 - vw / 2); cy = vh >= 1 ? 0.5 : clamp(state.pan.y, vh / 2, 1 - vh / 2);
+    state.pan.x = cx; state.pan.y = cy;
+  }
+  return [cx - vw / 2, cy - vh / 2, vw, vh];
+}
+function drawStage() {
+  resizeCanvas();
+  const p = active(), W = canvas.width, H = canvas.height;
+  $('#empty').hidden = state.photos.length > 0;
+  if (!p || !p.ready) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); gl.clearColor(...BG, 1); gl.clear(gl.COLOR_BUFFER_BIT); return; }
+  let tex = p.thumbTex, tw = p.thumb.width, th = p.thumb.height;
+  if (!tex) { tex = p.thumbTex = texFromImage(p.thumb); }
+  if (state.zoom !== 'fit' && p.fullTex) { tex = p.fullTex; tw = p.fw; th = p.fh; }
+  else if (p.previewTex) { tex = p.previewTex; tw = p.pw; th = p.ph; }
+  render({ tex, texW: tw, texH: th, fullW: p.w, fullH: p.h, s: p.settings, seed: p.seed, outW: W, outH: H, view: viewRect(p, W, H), bypass: state.before, glowShort: 384 });
+}
+
+/* ---------------- thumbnails ---------------- */
+const thumbQueue = new Set(); let thumbTimer = 0;
+function queueThumbs(ps) { ps.forEach(p => thumbQueue.add(p.id)); clearTimeout(thumbTimer); thumbTimer = setTimeout(runThumbs, 180); }
+function runThumbs() {
+  let n = 0;
+  for (const id of thumbQueue) { thumbQueue.delete(id); const p = byId(id); if (p) renderThumb(p); if (++n >= 6) break; }
+  if (thumbQueue.size) thumbTimer = setTimeout(runThumbs, 16);
+}
+function renderThumb(p) {
+  if (!p.thumb || !p.cv) return;
+  if (!p.thumbTex) p.thumbTex = texFromImage(p.thumb);
+  const w = p.thumb.width, h = p.thumb.height;
+  const px = renderToPixels(p, p.thumbTex, w, h, w, h);
+  p.cv.getContext('2d').putImageData(new ImageData(px, w, h), 0, 0);
+  p.el.querySelector('.dot').hidden = !isEdited(p.settings);
+}
+
+/* ---------------- library UI ---------------- */
+function buildFrame(p) {
+  const el = document.createElement('button'); el.type = 'button'; el.className = 'frame'; el.dataset.id = p.id;
+  el.innerHTML = `<canvas width="120" height="80"></canvas><span class="pending">developing…</span><span class="dot" hidden></span><span class="edge"><span class="num"></span><em></em></span>`;
+  el.title = p.name; el.querySelector('em').textContent = p.sample ? 'sample' : p.name;
+  p.el = el; p.cv = el.querySelector('canvas');
+  $('#filmTrack').appendChild(el);
+}
+function refreshLibraryUI() {
+  state.photos.forEach((p, i) => {
+    if (!p.el) return;
+    p.el.querySelector('.num').textContent = `${i + 1} ▸ ${i + 1}A`;
+    p.el.classList.toggle('sel', state.selected.has(p.id)); p.el.classList.toggle('active', p.id === state.activeId);
+    p.el.setAttribute('aria-pressed', state.selected.has(p.id));
+  });
+  const n = state.selected.size, total = state.photos.length;
+  $('#selInfo').textContent = !total ? 'No photos yet.' : n > 1
+    ? `${n} of ${total} selected. ${state.autoSync ? 'Edits apply to all of them.' : 'Edits apply to the photo in view only.'}`
+    : `${total} photo${total === 1 ? '' : 's'} in the library. Editing the one in view.`;
+  $('#presetHint').textContent = n > 1 ? `Applies to the ${n} selected photos.` : 'Applies to the photo in view. Select more to apply to several.';
+  $('#btnSync').disabled = n < 2; $('#btnPaste').disabled = !state.clip || !n; $('#btnRemove').disabled = !n;
+  $('#autoSync').checked = state.autoSync;
+}
+function setActive(id, { keepSelection = false } = {}) {
+  const p = byId(id); if (!p) return;
+  state.activeId = id; if (!keepSelection) { state.selected = new Set([id]); state.anchorId = id; }
+  state.selected.add(id);
+  if (state.zoom !== 'fit') { state.zoom = 'fit'; syncZoomBtn(); }
+  refreshLibraryUI(); syncControls(); refreshStageInfo(); requestDraw(); schedulePalette();
+  p.el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (p.ready && !p.previewTex) makePreview(p).then(() => { requestDraw(); schedulePalette(); });
+}
+$('#filmTrack').addEventListener('click', e => {
+  const el = e.target.closest('.frame'); if (!el) return;
+  const id = el.dataset.id;
+  if (e.shiftKey && state.anchorId) {
+    const a = state.photos.findIndex(p => p.id === state.anchorId), b = state.photos.findIndex(p => p.id === id);
+    const [lo, hi] = a < b ? [a, b] : [b, a];
+    state.selected = new Set(state.photos.slice(lo, hi + 1).map(p => p.id)); setActive(id, { keepSelection: true });
+  } else if (e.metaKey || e.ctrlKey) {
+    if (state.selected.has(id) && state.selected.size > 1) {
+      state.selected.delete(id);
+      if (id === state.activeId) setActive([...state.selected][0], { keepSelection: true }); else refreshLibraryUI();
+    } else { state.selected.add(id); state.anchorId = id; setActive(id, { keepSelection: true }); }
+  } else setActive(id);
+});
+function refreshStageInfo() {
+  const p = active(), box = $('#stageInfo');
+  if (!p) { box.innerHTML = ''; return; }
+  const stock = lutName(p.settings.stock) || 'No film';
+  box.innerHTML = `<span class="tag">${esc(p.name)}</span>` + (p.w ? `<span class="tag">${p.w}×${p.h}</span>` : '') +
+    `<span class="tag">${esc(stock)}</span>` + (state.zoom !== 'fit' ? '<span class="tag">100%</span>' : '') + (state.before ? '<span class="tag before">Before</span>' : '');
+}
+
+/* ---------------- develop controls ---------------- */
+function sliderHTML([key, label, min, max, step, def]) {
+  return `<div class="sl${key === 'halHue' ? ' hue-track' : ''}" data-key="${key}"><label for="s-${key}" title="Double-click to reset">${label}</label><button class="val" type="button" data-reset="${key}" title="Reset"></button><input type="range" id="s-${key}" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${def}"></div>`;
+}
+function buildPanels() {
+  let html = `<details open><summary>Film stock</summary><div class="sec"><div class="stocks" id="stockList"></div>${sliderHTML(SLIDERS.strength)}
+    <p class="fineprint">Stock names describe the look each recipe approximates. Not affiliated with Kodak, Fujifilm, Ilford or CineStill.</p></div></details>
+    <details open><summary>More film looks</summary><div class="sec">
+    <p class="hint">${PACK_TOTAL} film stocks, from Portra and Velvia to Polaroid and Tri-X, with push and pull variants. Search, or open a brand.</p>
+    <div class="lutlib" id="lutLib">
+      <input type="search" class="lut-search" id="lutSearch" placeholder="Search film looks, e.g. Portra" aria-label="Search film looks">
+      <div id="lutGroups"></div>
+    </div>
+    <p class="hint">Add your own: .cube files or HaldCLUT PNGs, one at a time or a whole folder. Folders become groups.</p>
+    <div class="btn-row"><label class="btn small" for="cubeIn">Load LUT files</label><input type="file" id="cubeIn" accept=".cube,.png,image/png" multiple hidden>
+    <label class="btn small" for="lutDir">Load a folder</label><input type="file" id="lutDir" webkitdirectory multiple hidden></div>
+    <div class="lut-status" id="lutStatus" hidden></div>
+    <p class="fineprint">Film pack: the <a href="https://rawpedia.rawtherapee.com/Film_Simulation" target="_blank" rel="noopener">RawTherapee Film Simulation Collection</a> (2015) by Pat David, Pavlov Dmitry and Michael Ezra, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>, resampled to 33\u00B3 for this app. Film names describe the stock each look approximates; no affiliation with the makers.</p>
+    </div></details>`;
+  for (const g of GROUPS) {
+    html += `<details${g.id === 'vignette' ? '' : ' open'}><summary>${g.title}</summary><div class="sec">${g.note ? `<p class="hint">${g.note}</p>` : ''}${g.sliders.map(sliderHTML).join('')}</div></details>`;
+  }
+  $('#groups').innerHTML = html;
+  buildStockList();
+  $('#groups').addEventListener('input', e => { const k = e.target.dataset.key; if (k) { setFill(e.target); applySetting(k, Number(e.target.value)); } });
+  $('#groups').addEventListener('click', e => {
+    const r = e.target.closest('[data-reset]'); if (r) { applySetting(r.dataset.reset, SLIDERS[r.dataset.reset][5]); syncControls(); return; }
+    const rg = e.target.closest('[data-rmgroup]');
+    if (rg) {
+      if (rg.dataset.armed) removeLutGroup(rg.dataset.rmgroup);
+      else { rg.dataset.armed = '1'; rg.textContent = `Click again to remove all ${rg.dataset.n}`; setTimeout(() => { if (rg.isConnected) { delete rg.dataset.armed; rg.textContent = 'Remove this group'; } }, 4000); }
+      return;
+    }
+    const st = e.target.closest('[data-stock]'); if (!st) return;
+    if (e.target.closest('.x')) { removeCustomLut(st.dataset.stock); return; }
+    ensureLut(st.dataset.stock); applySetting('stock', st.dataset.stock); syncControls();
+  });
+  $('#groups').addEventListener('toggle', e => {
+    const g = e.target.dataset?.group; if (g == null) return;
+    if (e.target.open) { state.lutOpen.add(g); if (g.startsWith('pack:')) loadPackGroup(g.slice(5)); } else state.lutOpen.delete(g);
+  }, true);
+  $('#groups').addEventListener('dblclick', e => { const l = e.target.closest('.sl label'); if (l) { const k = l.parentElement.dataset.key; applySetting(k, SLIDERS[k][5]); syncControls(); } });
+  $('#groups').addEventListener('change', e => { if (e.target.id === 'cubeIn' || e.target.id === 'lutDir') loadLutFiles(e.target); });
+  $('#groups').addEventListener('input', e => { if (e.target.id === 'lutSearch') { state.lutQuery = e.target.value.trim(); buildLutLib(); } });
+}
+function stockStrip(entry) {
+  const c = document.createElement('canvas'); c.width = 9; c.height = 1;
+  const x = c.getContext('2d'), img = x.createImageData(9, 1);
+  const cols = ['#C8967A', '#6F9BD1', '#5F7F3E', '#B8403A', '#1A1A1A', '#4D4D4D', '#808080', '#B3B3B3', '#E6E6E6'].map(hexToRgb);
+  cols.forEach((rgb, i) => { const o = entry ? lutLookup(entry, rgb[0] / 255, rgb[1] / 255, rgb[2] / 255).map(v => v * 255) : rgb; img.data.set([o[0], o[1], o[2], 255], i * 4); });
+  x.putImageData(img, 0, 0); return c;
+}
+function buildStockList() {
+  const box = $('#stockList'); box.innerHTML = '';
+  for (const it of STOCKS) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'stock'; b.dataset.stock = it.id;
+    b.innerHTML = `<b>${esc(it.name)}</b><small>${esc(it.note)}</small>`;
+    b.prepend(stockStrip(lutEntry(it.id))); box.appendChild(b);
+  }
+  buildLutLib();
+}
+function blankStrip() { const c = document.createElement('canvas'); c.width = 9; c.height = 1; return c; }
+function buildLutLib() {
+  const q = (state.lutQuery || '').toLowerCase(), cur = active()?.settings.stock;
+  const match = (name, g) => !q || `${g} ${name}`.toLowerCase().includes(q);
+  const box = $('#lutGroups'); box.innerHTML = '';
+  let shown = 0;
+  const section = (title, count) => { const h = document.createElement('div'); h.className = 'lutlib-head'; h.innerHTML = `<b>${title}</b><span>${count}</span>`; box.appendChild(h); };
+  const group = (key, label, items, custom) => {
+    const d = document.createElement('details'); d.className = 'lut-group'; d.dataset.group = key;
+    d.open = !!q || state.lutOpen.has(key) || items.some(it => it.id === cur);
+    d.innerHTML = `<summary>${esc(label)}<em>${items.length}</em></summary><div class="lut-rows"></div>` + (custom ? `<button type="button" class="linkbtn" data-rmgroup="${esc(label)}" data-n="${items.length}">Remove this group</button>` : '');
+    const rows = d.querySelector('.lut-rows');
+    for (const it of items) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'lut-row'; b.dataset.stock = it.id; b.title = it.name;
+      b.innerHTML = `<span>${esc(it.name)}</span>` + (custom ? `<span class="x" role="button" aria-label="Remove ${esc(it.name)}" title="Remove">\u00D7</span>` : '');
+      const e = LUTS.get(it.id); b.prepend(e ? stockStrip(e) : blankStrip()); rows.appendChild(b);
+    }
+    box.appendChild(d); shown += items.length;
+    if (d.open && key.startsWith('pack:')) loadPackGroup(key.slice(5));
+  };
+  const packGroups = PACK.map(g => ({ g, items: g.n.map((name, i) => ({ id: `pack:${g.s}:${i}`, name })).filter(it => match(it.name, g.g)) })).filter(x => x.items.length);
+  if (packGroups.length) { section('Film pack', q ? `${packGroups.reduce((n, x) => n + x.items.length, 0)} found` : `${PACK_TOTAL} looks`); packGroups.forEach(x => group('pack:' + x.g.s, x.g.g, x.items, false)); }
+  const customs = [...LUTS.values()].filter(e => e.custom), mine = new Map();
+  for (const e of customs) { const g = e.group || 'Imported'; if (!match(e.name, g)) continue; if (!mine.has(g)) mine.set(g, []); mine.get(g).push(e); }
+  if (mine.size) {
+    section('Yours', `${customs.length} LUT${customs.length === 1 ? '' : 's'}`);
+    for (const g of [...mine.keys()].sort((a, b) => a.localeCompare(b))) group(g, g, mine.get(g).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })), true);
+  }
+  if (!shown) box.innerHTML = '<p class="hint">No film looks match that search.</p>';
+  syncControls();
+}
+function refreshPackStrips(slug) {
+  document.querySelectorAll(`.lut-row[data-stock^="pack:${slug}:"]`).forEach(b => { const e = LUTS.get(b.dataset.stock); if (e) b.querySelector('canvas').replaceWith(stockStrip(e)); });
+}
+function setFill(input) {
+  const min = +input.min, max = +input.max, v = +input.value, pos = (v - min) / (max - min) * 100;
+  const mid = min < 0 ? (0 - min) / (max - min) * 100 : 0;
+  input.style.setProperty('--a', Math.min(pos, mid) + '%'); input.style.setProperty('--b', Math.max(pos, mid) + '%');
+}
+function syncControls() {
+  const p = active(), s = p ? p.settings : DEFAULTS;
+  for (const [key, , min, , , , fmt] of Object.values(SLIDERS)) {
+    const inp = document.getElementById('s-' + key); if (!inp) continue;
+    inp.value = s[key]; setFill(inp);
+    const val = inp.parentElement.querySelector('.val'); val.textContent = fmt ? fmt(s[key]) : (min < 0 ? pm(s[key]) : Math.round(s[key]));
+  }
+  document.querySelectorAll('#groups [data-stock]').forEach(b => { const on = b.dataset.stock === s.stock; b.setAttribute('aria-pressed', on); const g = on && b.closest('.lut-group'); if (g && !g.open) g.open = true; });
+}
+function targets() { const p = active(); if (!p) return []; return state.autoSync ? selectedPhotos() : [p]; }
+function applySetting(key, val) {
+  const ts = targets(); if (!ts.length) return;
+  ts.forEach(p => { p.settings[key] = val; persistSoon(p); });
+  const sl = SLIDERS[key];
+  if (sl) { const v = document.querySelector(`.sl[data-key="${key}"] .val`); if (v) v.textContent = sl[6] ? sl[6](val) : (sl[2] < 0 ? pm(val) : Math.round(val)); }
+  if (key === 'stock') refreshStageInfo();
+  requestDraw(); queueThumbs(ts); schedulePalette();
+}
+function applySettingsTo(ps, settings, label) {
+  ps.forEach(p => { p.settings = { ...DEFAULTS, ...settings }; persistSoon(p); });
+  syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette();
+  if (label) toast(label);
+}
+
+/* ---------------- library actions ---------------- */
+$('#autoSync').addEventListener('change', e => { state.autoSync = e.target.checked; prefs.set('autoSync', state.autoSync); refreshLibraryUI(); });
+$('#btnSelAll').onclick = () => { state.selected = new Set(state.photos.map(p => p.id)); refreshLibraryUI(); };
+$('#btnSelOne').onclick = () => { if (state.activeId) { state.selected = new Set([state.activeId]); refreshLibraryUI(); } };
+function copySettings() { const p = active(); if (!p) return; state.clip = { ...p.settings }; refreshLibraryUI(); toast('Settings copied'); }
+function pasteSettings() { if (!state.clip) return; const ps = selectedPhotos(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`); }
+$('#btnCopy').onclick = copySettings; $('#btnPaste').onclick = pasteSettings;
+$('#btnSync').onclick = () => { const p = active(); if (!p) return; const ps = selectedPhotos().filter(q => q !== p); applySettingsTo(ps, p.settings, `Matched ${ps.length} photo${ps.length === 1 ? '' : 's'} to this one`); };
+$('#btnRemove').onclick = () => { const n = state.selected.size; $('#removeText').textContent = `Remove ${n} photo${n === 1 ? '' : 's'} from the library? Your original files aren’t touched.`; $('#removeConfirm').hidden = false; };
+$('#removeNo').onclick = () => { $('#removeConfirm').hidden = true; };
+$('#removeYes').onclick = () => { $('#removeConfirm').hidden = true; removePhotos([...state.selected]); };
+$('#btnReset').onclick = () => { const ts = targets(); applySettingsTo(ts, {}, ts.length > 1 ? `Reset ${ts.length} photos` : 'Photo reset'); };
+
+function importFiles(list) {
+  const files = [...list].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|avif|gif|bmp|heic)$/i.test(f.name));
+  if (!files.length) { toast('No photos found there'); return; }
+  const added = addPhotos(files.map(f => ({ blob: f, name: f.name })));
+  setActive(added[0].id);
+  if (files.length > 1) { state.selected = new Set(added.map(p => p.id)); refreshLibraryUI(); }
+  toast(`Added ${files.length} photo${files.length === 1 ? '' : 's'}`);
+}
+$('#fileIn').addEventListener('change', e => { importFiles(e.target.files); e.target.value = ''; });
+$('#folderIn').addEventListener('change', e => { importFiles(e.target.files); e.target.value = ''; });
+let dragDepth = 0;
+window.addEventListener('dragenter', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { dragDepth++; document.body.classList.add('dropping'); } });
+window.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) document.body.classList.remove('dropping'); });
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dropping'); if (e.dataTransfer?.files?.length) importFiles(e.dataTransfer.files); });
+
+/* ---------------- presets ---------------- */
+function renderPresets() {
+  const box = $('#presetList'); box.innerHTML = '';
+  const all = [...BUILTIN_PRESETS.map(p => ({ ...p, builtin: true })), ...state.userPresets];
+  all.forEach((pr, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'preset'; b.dataset.i = i;
+    b.innerHTML = `<span>${esc(pr.name)}</span>` + (pr.builtin ? `<em>${esc(STOCK_BY_ID[pr.s.stock]?.name || '')}</em>` : `<em>yours</em><span class="x" role="button" aria-label="Delete preset" title="Delete preset" data-del="${i - BUILTIN_PRESETS.length}">×</span>`);
+    box.appendChild(b);
+  });
+}
+$('#presetList').addEventListener('click', e => {
+  const del = e.target.closest('[data-del]');
+  if (del) { state.userPresets.splice(+del.dataset.del, 1); prefs.set('presets', state.userPresets); renderPresets(); return; }
+  const b = e.target.closest('.preset'); if (!b) return;
+  const all = [...BUILTIN_PRESETS, ...state.userPresets], pr = all[+b.dataset.i];
+  const ps = selectedPhotos(); if (!ps.length) return;
+  applySettingsTo(ps, pr.s, `“${pr.name}” applied to ${ps.length} photo${ps.length === 1 ? '' : 's'}`);
+});
+$('#presetSave').onclick = () => {
+  const p = active(); if (!p) return;
+  const name = $('#presetName').value.trim() || `My look ${state.userPresets.length + 1}`;
+  const s = {}; for (const k of Object.keys(DEFAULTS)) if (p.settings[k] !== DEFAULTS[k]) s[k] = p.settings[k];
+  state.userPresets.push({ name, s }); prefs.set('presets', state.userPresets); $('#presetName').value = ''; renderPresets(); toast(`Saved “${name}”`);
+};
+$('#presetName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#presetSave').click(); });
+
+/* ---------------- .cube in and out ---------------- */
+async function loadLutFiles(input) {
+  const files = [...input.files].filter(f => /\.(cube|png)$/i.test(f.name) && !f.name.startsWith('.') && !/identity/i.test(f.name));
+  input.value = '';
+  if (!files.length) { toast('No .cube or .png files found there'); return; }
+  const status = $('#lutStatus'); status.hidden = false;
+  const have = new Set([...LUTS.values()].filter(e => e.custom).map(e => (e.group || 'Imported') + '/' + e.name));
+  let added = 0, skipped = 0, firstId = null, lastErr = '';
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i], parts = (f.webkitRelativePath || '').split('/');
+    // "HaldCLUT/Color/Fuji/x.png" groups as "Color / Fuji"; files at the top of the chosen folder take its name.
+    const group = parts.length > 2 ? parts.slice(1, -1).join(' / ').replace(/-/g, ' ').replace(/\bColor\b/g, 'Colour') : parts.length === 2 ? parts[0] : 'Imported';
+    const name = f.name.replace(/\.(cube|png)$/i, '').replace(/_/g, ' ').trim();
+    status.textContent = `Loading ${i + 1} of ${files.length}: ${name}`;
+    if (have.has(group + '/' + name)) { skipped++; continue; }
+    try {
+      const { N, data } = /\.cube$/i.test(f.name) ? parseCube(await f.text()) : await parseHald(f);
+      const id = 'lut:' + uid(); LUTS.set(id, { id, name, group, N, data, custom: true }); have.add(group + '/' + name);
+      await DB.put('luts', { id, name, group, N, data });
+      added++; firstId = firstId || id;
+    } catch (err) { skipped++; lastErr = `${f.name}: ${err.message}`; }
+    if (i % 8 === 7) await new Promise(r => setTimeout(r, 0));
+  }
+  status.hidden = true;
+  if (added && files.length > 1) state.lutOpen = new Set();
+  buildStockList();
+  if (added === 1) { applySetting('stock', firstId); syncControls(); }
+  toast(added ? `Added ${added} LUT${added === 1 ? '' : 's'}${skipped ? `, skipped ${skipped}` : ''}` : (lastErr || 'Those files were already loaded'), 5000);
+}
+function dropLuts(ids) {
+  for (const id of ids) { const e = LUTS.get(id); if (!e) continue; if (e.tex) gl.deleteTexture(e.tex); LUTS.delete(id); DB.del('luts', id); }
+  const gone = new Set(ids);
+  state.photos.forEach(p => { if (gone.has(p.settings.stock)) { p.settings.stock = 'none'; persistSoon(p); queueThumbs([p]); } });
+  buildStockList(); refreshStageInfo(); requestDraw(); schedulePalette();
+}
+function removeCustomLut(id) { if (LUTS.get(id)) { dropLuts([id]); toast('LUT removed'); } }
+function removeLutGroup(g) {
+  const ids = [...LUTS.values()].filter(e => e.custom && (e.group || 'Imported') === g).map(e => e.id);
+  dropLuts(ids); toast(`Removed ${ids.length} LUT${ids.length === 1 ? '' : 's'}`);
+}
+$('#btnCube').onclick = async () => {
+  const p = active(); if (!p) return;
+  const N = 33, W = N * N, s = { ...p.settings, grain: 0, halation: 0, bloom: 0, vignette: 0 };
+  const id = new Float32Array(W * N * 4);
+  for (let b = 0; b < N; b++) for (let x = 0; x < W; x++) { const i = (b * W + x) * 4; id[i] = (x % N) / (N - 1); id[i + 1] = Math.floor(x / N) / (N - 1); id[i + 2] = b / (N - 1); id[i + 3] = 1; }
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, W, N, 0, gl.RGBA, gl.FLOAT, id); texParams(gl.TEXTURE_2D, false, true);
+  const rt = makeRT(W, N, { float: FLOAT_RT });
+  render({ tex: t, texW: W, texH: N, fullW: W, fullH: N, s, seed: 1, outW: W, outH: N, view: [0, 0, 1, 1], fb: rt.fb, dither: 0 });
+  gl.bindFramebuffer(gl.FRAMEBUFFER, rt.fb);
+  let px, scale = 1;
+  if (FLOAT_RT) { px = new Float32Array(W * N * 4); gl.readPixels(0, 0, W, N, gl.RGBA, gl.FLOAT, px); }
+  else { px = new Uint8Array(W * N * 4); gl.readPixels(0, 0, W, N, gl.RGBA, gl.UNSIGNED_BYTE, px); scale = 1 / 255; }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); freeRT(rt); gl.deleteTexture(t);
+  await ensureLut(p.settings.stock);
+  const title = (lutName(p.settings.stock) || 'Safelight') + ' look';
+  const lines = [`TITLE "${title}"`, '# Made in Safelight Film Lab. Colour and tone only: grain, halation and vignette are not included.', `LUT_3D_SIZE ${N}`, 'DOMAIN_MIN 0 0 0', 'DOMAIN_MAX 1 1 1'];
+  for (let b = 0; b < N; b++) for (let g = 0; g < N; g++) for (let r = 0; r < N; r++) {
+    const i = ((N - 1 - b) * W + r + N * g) * 4; lines.push(`${(px[i] * scale).toFixed(6)} ${(px[i + 1] * scale).toFixed(6)} ${(px[i + 2] * scale).toFixed(6)}`);
+  }
+  const fname = title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') || 'look';
+  try {
+    if (window.JSZip) { const z = new JSZip(); z.file(fname + '.cube', lines.join('\n') + '\n'); await saveFile(fname + '-cube.zip', await z.generateAsync({ type: 'blob', compression: 'DEFLATE' })); }
+    else await saveFile(fname + '.cube.txt', lines.join('\n') + '\n');
+  } catch (e) { if (e?.code !== 'declined') toast(e?.message || 'The LUT couldn’t be saved'); }
+};
+
+/* ---------------- saving files ---------------- */
+let dlCap;
+async function downloadsCap() {
+  if (dlCap !== undefined) return dlCap;
+  try { dlCap = window.claude?.use ? await window.claude.use('downloads') : null; } catch { dlCap = null; }
+  return dlCap;
+}
+async function saveFile(name, data) {
+  const dl = await downloadsCap();
+  if (dl) { try { await dl.save({ filename: name, data }); toast(`Saved ${name}`); return true; } catch (e) { if (e?.code === 'declined') { toast('Save cancelled'); return false; } throw e; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(data instanceof Blob ? data : new Blob([data])); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); return true;
+}
+
+/* ---------------- export ---------------- */
+const dlg = $('#exportDlg');
+$('#btnExport').onclick = () => {
+  if (!state.photos.length) { toast('Add some photos first'); return; }
+  const n = state.selected.size;
+  $('#scopeSel').textContent = `Selected (${n})`; $('#scopeAll').textContent = `All (${state.photos.length})`;
+  dlg.querySelector(`input[name=scope][value=${n > 1 ? 'selected' : 'active'}]`).checked = true;
+  const ex = prefs.get('export', {}); if (ex.size != null) $('#exSize').value = ex.size; if (ex.fmt) dlg.querySelector(`input[name=fmt][value=${ex.fmt}]`).checked = true;
+  if (ex.q) $('#exQuality').value = ex.q; if (ex.suffix != null) $('#exSuffix').value = ex.suffix;
+  syncQuality(); $('#exProgress').hidden = true; $('#exStatus').hidden = true; $('#exGo').disabled = false;
+  dlg.showModal();
+};
+function syncQuality() { const f = dlg.querySelector('input[name=fmt]:checked').value; $('#qualityRow').hidden = f === 'png'; $('#exQualityVal').textContent = $('#exQuality').value; setFill($('#exQuality')); }
+dlg.addEventListener('input', syncQuality);
+async function exportOne(p, longEdge, mime, q) {
+  const bmp = await createImageBitmap(p.blob);
+  let W = bmp.width, H = bmp.height, sc = 1;
+  if (longEdge && Math.max(W, H) > longEdge) sc = longEdge / Math.max(W, H);
+  sc = Math.min(sc, MAXDIM / Math.max(W, H));
+  const tw = Math.max(1, Math.round(W * sc)), th = Math.max(1, Math.round(H * sc));
+  const img = sc < 1 ? await createImageBitmap(bmp, { resizeWidth: tw, resizeHeight: th, resizeQuality: 'high' }) : bmp;
+  const tex = texFromImage(img);
+  const rt = makeRT(tw, th);
+  render({ tex, texW: tw, texH: th, fullW: tw, fullH: th, s: p.settings, seed: p.seed, outW: tw, outH: th, view: [0, 0, 1, 1], fb: rt.fb, glowShort: 384 });
+  const px = readRT(rt); freeRT(rt); gl.deleteTexture(tex);
+  if (img !== bmp) img.close?.(); bmp.close?.();
+  const c = document.createElement('canvas'); c.width = tw; c.height = th;
+  c.getContext('2d').putImageData(new ImageData(px, tw, th), 0, 0);
+  return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('The browser couldn’t encode this image')), mime, q));
+}
+$('#exGo').onclick = async () => {
+  const scope = dlg.querySelector('input[name=scope]:checked').value;
+  const ps = scope === 'all' ? state.photos.filter(p => p.ready) : scope === 'selected' ? selectedPhotos().filter(p => p.ready) : [active()].filter(Boolean);
+  if (!ps.length) return;
+  const fmt = dlg.querySelector('input[name=fmt]:checked').value, longEdge = +$('#exSize').value, q = +$('#exQuality').value / 100, suffix = $('#exSuffix').value.trim();
+  prefs.set('export', { size: longEdge, fmt, q: Math.round(q * 100), suffix });
+  const mime = { jpeg: 'image/jpeg', webp: 'image/webp', png: 'image/png' }[fmt], ext = fmt === 'jpeg' ? 'jpg' : fmt;
+  const bar = $('#exProgress'), status = $('#exStatus'); bar.hidden = false; status.hidden = false; $('#exGo').disabled = true;
+  const used = new Set(), files = [];
+  try {
+    for (let i = 0; i < ps.length; i++) {
+      status.textContent = `Developing ${i + 1} of ${ps.length}: ${ps[i].name}`;
+      bar.firstElementChild.style.width = (i / ps.length * 100) + '%';
+      await new Promise(r => setTimeout(r, 0));
+      await ensureLut(ps[i].settings.stock);
+      const blob = await exportOne(ps[i], longEdge, mime, q);
+      let base = ps[i].name.replace(/\.[^.]+$/, '') + suffix, name = `${base}.${ext}`, k = 2;
+      while (used.has(name)) name = `${base}-${k++}.${ext}`; used.add(name);
+      files.push({ name, blob });
+    }
+    bar.firstElementChild.style.width = '100%';
+    if (files.length === 1) { status.textContent = 'Ready. Confirm the save.'; await saveFile(files[0].name, files[0].blob); }
+    else if (window.JSZip) {
+      status.textContent = 'Packing a zip…';
+      const z = new JSZip(); files.forEach(f => z.file(f.name, f.blob, { compression: 'STORE' }));
+      const zip = await z.generateAsync({ type: 'blob' });
+      status.textContent = 'Ready. Confirm the save.';
+      await saveFile(`safelight-${files.length}-photos.zip`, zip);
+    } else { for (const f of files) await saveFile(f.name, f.blob); }
+    status.textContent = `Done: ${files.length} photo${files.length === 1 ? '' : 's'}.`;
+  } catch (e) {
+    status.textContent = e?.code === 'too_large' ? 'That export is too big to save in one go. Try a smaller size or fewer photos.' : (e?.message || 'Export failed.');
+  } finally { $('#exGo').disabled = false; requestDraw(); }
+};
+
+/* ---------------- colour check ---------------- */
+function renderSwatchList() {
+  const ul = $('#swatchList'); ul.innerHTML = '';
+  state.swatches.forEach((s, i) => {
+    const li = document.createElement('li'); li.className = 'sw';
+    li.innerHTML = `<i style="background:${s.hex}"></i><span class="sw-name"><input value="${esc(s.name)}" data-i="${i}" aria-label="Colour name"><span class="hex">${s.hex}</span></span><button class="x" type="button" data-rm="${i}" aria-label="Remove ${esc(s.name)}">×</button>`;
+    ul.appendChild(li);
+  });
+  if (!state.swatches.length) ul.innerHTML = '<li class="hint">No colours yet. Add one below.</li>';
+}
+function saveSwatches() { prefs.set('swatches', state.swatches); renderSwatchList(); renderCompare(); }
+$('#swatchList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) { state.swatches.splice(+b.dataset.rm, 1); saveSwatches(); } });
+$('#swatchList').addEventListener('change', e => { const i = e.target.dataset.i; if (i != null) { state.swatches[+i].name = e.target.value.trim() || state.swatches[+i].hex; saveSwatches(); } });
+function addSwatch(hex, name) { hex = hex.toUpperCase(); if (state.swatches.some(s => s.hex === hex)) return; state.swatches.push({ name: name || hex, hex }); saveSwatches(); }
+$('#swPick').addEventListener('input', e => { $('#swHex').value = e.target.value.toUpperCase(); });
+$('#swHex').addEventListener('input', e => { const v = e.target.value.trim(); if (/^#?[0-9a-f]{6}$/i.test(v)) $('#swPick').value = (v[0] === '#' ? v : '#' + v).toLowerCase(); });
+$('#swAdd').onclick = () => { let v = $('#swHex').value.trim(); if (v[0] !== '#') v = '#' + v; if (!/^#[0-9a-f]{6}$/i.test(v)) { toast('Use a six-digit hex colour, like #4E2A45'); return; } addSwatch(v); };
+$('#swHex').addEventListener('keydown', e => { if (e.key === 'Enter') $('#swAdd').click(); });
+$('#swBrand').onclick = () => { state.swatches = BRAND.map(s => ({ ...s })); saveSwatches(); };
+$('#cmpShow').checked = state.showCmp;
+$('#cmpShow').addEventListener('change', e => { state.showCmp = e.target.checked; prefs.set('showCmp', state.showCmp); $('#cmp').hidden = !state.showCmp; requestDraw(); schedulePalette(); });
+$('#swEyedrop').onclick = () => setPicking(!state.picking);
+function setPicking(on) { state.picking = on; $('#swEyedrop').setAttribute('aria-pressed', on); updateStageCursor(); if (!on) $('#loupe').hidden = true; else toast('Click the photo to add that colour. Esc to stop.'); }
+$('#swFromImg').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const bmp = await createImageBitmap(f), sc = 90 / Math.max(bmp.width, bmp.height);
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * sc)); c.height = Math.max(1, Math.round(bmp.height * sc));
+    const x = c.getContext('2d'); x.drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+    const pal = kmeans(x.getImageData(0, 0, c.width, c.height).data, 5);
+    pal.forEach(k => addSwatch(rgbToHex(k.rgb))); toast(`Added ${pal.length} colours from “${f.name}”`);
+  } catch { toast('Couldn’t read that image'); }
+});
+
+function kmeans(px, k) {
+  const pts = []; for (let i = 0; i < px.length; i += 4) { const rgb = [px[i], px[i + 1], px[i + 2]]; pts.push({ rgb, lab: rgbToLab(rgb) }); }
+  if (!pts.length) return [];
+  const d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2, R = rng(42);
+  const cents = [pts[Math.floor(R() * pts.length)].lab.slice()];
+  while (cents.length < k) {
+    let sum = 0; const d = pts.map(p => { let m = Infinity; for (const c of cents) m = Math.min(m, d2(p.lab, c)); sum += m; return m; });
+    if (sum === 0) break;
+    let r = R() * sum, idx = 0; for (; idx < d.length - 1; idx++) { r -= d[idx]; if (r <= 0) break; }
+    cents.push(pts[idx].lab.slice());
+  }
+  const asg = new Int32Array(pts.length);
+  for (let it = 0; it < 10; it++) {
+    const sums = cents.map(() => [0, 0, 0, 0]);
+    pts.forEach((p, i) => { let best = 0, bd = Infinity; cents.forEach((c, j) => { const dd = d2(p.lab, c); if (dd < bd) { bd = dd; best = j; } }); asg[i] = best; const s = sums[best]; s[0] += p.lab[0]; s[1] += p.lab[1]; s[2] += p.lab[2]; s[3]++; });
+    cents.forEach((c, j) => { const s = sums[j]; if (s[3]) { c[0] = s[0] / s[3]; c[1] = s[1] / s[3]; c[2] = s[2] / s[3]; } });
+  }
+  const out = cents.map(() => ({ rgb: [0, 0, 0], n: 0 }));
+  pts.forEach((p, i) => { const o = out[asg[i]]; o.rgb[0] += p.rgb[0]; o.rgb[1] += p.rgb[1]; o.rgb[2] += p.rgb[2]; o.n++; });
+  return out.filter(o => o.n).map(o => { const rgb = o.rgb.map(v => Math.round(v / o.n)); return { rgb, lab: rgbToLab(rgb), share: o.n / pts.length }; }).sort((a, b) => b.share - a.share);
+}
+// For each colour: the average of the 2% of pixels nearest to it, and how much of the frame sits within ΔE 10.
+function closest(pix, lab) {
+  const d = pix.map((p, i) => [(p.lab[0] - lab[0]) ** 2 + (p.lab[1] - lab[1]) ** 2 + (p.lab[2] - lab[2]) ** 2, i]).sort((a, b) => a[0] - b[0]);
+  const n = Math.max(6, Math.round(pix.length * 0.02)), acc = [0, 0, 0];
+  for (let j = 0; j < n; j++) { const p = pix[d[j][1]]; acc[0] += p.rgb[0]; acc[1] += p.rgb[1]; acc[2] += p.rgb[2]; }
+  const rgb = acc.map(v => v / n); let cover = 0;
+  for (const p of pix) if (dE00(p.lab, lab) < 10) cover++;
+  return { rgb, de: dE00(rgbToLab(rgb), lab), cover: cover / pix.length };
+}
+let palTimer = 0;
+function schedulePalette() { clearTimeout(palTimer); palTimer = setTimeout(computePalette, 260); }
+function computePalette() {
+  const p = active();
+  if (!p || !p.ready || !state.showCmp) { state.palette = null; renderCompare(); return; }
+  let tex = p.previewTex, tw = p.pw, th = p.ph; if (!tex) { tex = p.thumbTex || (p.thumbTex = texFromImage(p.thumb)); tw = p.thumb.width; th = p.thumb.height; }
+  const sc = 96 / Math.max(p.w, p.h), w = Math.max(1, Math.round(p.w * sc)), h = Math.max(1, Math.round(p.h * sc));
+  const toPix = px => { const a = []; for (let i = 0; i < px.length; i += 4) { const rgb = [px[i], px[i + 1], px[i + 2]]; a.push({ rgb, lab: rgbToLab(rgb) }); } return a; };
+  const before = renderToPixels(p, tex, tw, th, w, h, { bypass: true });
+  const after = renderToPixels(p, tex, tw, th, w, h, { dither: 0 });
+  state.palette = { before: kmeans(before, 6), after: kmeans(after, 6), pixB: toPix(before), pixA: toPix(after) };
+  renderCompare();
+}
+function renderCompare() {
+  $('#cmp').hidden = !state.showCmp;
+  const cards = $('#cmpCards'), pal = state.palette;
+  if (!pal) { cards.innerHTML = '<span class="hint">Open a photo to compare.</span>'; $('#barBefore').innerHTML = ''; $('#barAfter').innerHTML = ''; return; }
+  cards.innerHTML = state.swatches.length ? '' : '<span class="hint">Add colours on the left to see how close each photo gets.</span>';
+  for (const s of state.swatches) {
+    const lab = rgbToLab(hexToRgb(s.hex)), b = closest(pal.pixB, lab), a = closest(pal.pixA, lab);
+    const verdict = a.de < 6 ? ['ok', 'Match'] : a.de < 15 ? ['warn', 'Near'] : ['far', 'Far'];
+    const delta = b.de - a.de, arrow = Math.abs(delta) < 0.5 ? '' : delta > 0 ? '<b class="up">↓</b>' : '<b class="down">↑</b>';
+    const el = document.createElement('div'); el.className = 'card';
+    el.title = `${s.name} ${s.hex}. Closest area after grading: ${rgbToHex(a.rgb)}. Within ΔE 10: ${(b.cover * 100).toFixed(0)}% before, ${(a.cover * 100).toFixed(0)}% after.`;
+    el.innerHTML = `<span class="split"><i style="background:${s.hex}"></i><i style="background:${rgbToHex(a.rgb)}"></i></span>
+      <span class="card-meta"><b>${esc(s.name)}</b><span>ΔE ${b.de.toFixed(1)} → ${a.de.toFixed(1)} ${arrow}</span><span>${(b.cover * 100).toFixed(0)}% → ${(a.cover * 100).toFixed(0)}% of frame</span></span>
+      <em class="pill ${verdict[0]}">${verdict[1]}</em>`;
+    cards.appendChild(el);
+  }
+  const bar = (box, ks) => { box.innerHTML = ''; ks.forEach(k => { const i = document.createElement('i'); const hx = rgbToHex(k.rgb); i.style.background = hx; i.style.flex = k.share; i.title = `${hx} · ${(k.share * 100).toFixed(0)}% · click to add to your colours`; i.onclick = () => addSwatch(hx); box.appendChild(i); }); };
+  bar($('#barBefore'), pal.before); bar($('#barAfter'), pal.after);
+}
+
+/* ---------------- stage interaction ---------------- */
+const stage = $('#stage');
+function updateStageCursor() {
+  stage.classList.toggle('picking', state.picking);
+  stage.classList.toggle('zoomed', !state.picking && state.zoom !== 'fit');
+  stage.classList.toggle('zoomable', !state.picking && state.zoom === 'fit');
+}
+function syncZoomBtn() { $('#btnZoom').setAttribute('aria-pressed', state.zoom !== 'fit'); $('#btnZoom').textContent = state.zoom === 'fit' ? '100%' : 'Fit'; updateStageCursor(); refreshStageInfo(); }
+function setZoom(z, at) {
+  const p = active(); if (!p) return;
+  state.zoom = z; if (at) state.pan = { x: at[0], y: at[1] };
+  if (z !== 'fit') ensureFull(p);
+  syncZoomBtn(); requestDraw();
+}
+$('#btnZoom').onclick = () => setZoom(state.zoom === 'fit' ? '1:1' : 'fit', [0.5, 0.5]);
+function canvasToImage(ev) {
+  const p = active(); if (!p) return null;
+  const r = canvas.getBoundingClientRect(), v = viewRect(p, canvas.width, canvas.height);
+  const x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
+  return { img: [v[0] + x * v[2], v[1] + y * v[3]], px: [Math.floor(x * canvas.width), Math.floor(y * canvas.height)] };
+}
+function samplePixel(px) {
+  const W = canvas.width, H = canvas.height, x = clamp(px[0] - 1, 0, W - 3), y = clamp(H - px[1] - 2, 0, H - 3), buf = new Uint8Array(36);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.readPixels(x, y, 3, 3, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+  const c = [0, 0, 0]; for (let i = 0; i < 36; i += 4) { c[0] += buf[i]; c[1] += buf[i + 1]; c[2] += buf[i + 2]; }
+  return c.map(v => v / 9);
+}
+let drag = null;
+stage.addEventListener('pointerdown', e => {
+  if (!active()?.ready || e.button !== 0) return;
+  drag = { x: e.clientX, y: e.clientY, moved: false, pan: { ...state.pan } };
+  stage.setPointerCapture(e.pointerId);
+  if (state.zoom !== 'fit' && !state.picking) stage.classList.add('dragging');
+});
+stage.addEventListener('pointermove', e => {
+  const p = active(); if (!p?.ready) return;
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    if (state.zoom !== 'fit' && !state.picking && drag.moved) {
+      const dpr = canvas.width / canvas.getBoundingClientRect().width;
+      state.pan = { x: drag.pan.x - dx * dpr / p.w, y: drag.pan.y - dy * dpr / p.h }; requestDraw();
+    }
+  }
+  const hit = canvasToImage(e), loupe = $('#loupe');
+  const inside = hit && hit.img[0] >= 0 && hit.img[1] >= 0 && hit.img[0] <= 1 && hit.img[1] <= 1;
+  if (!state.picking || !inside) { loupe.hidden = true; return; }
+  const rgb = samplePixel(hit.px), hex = rgbToHex(rgb), lab = rgbToLab(rgb);
+  let near = ''; if (state.swatches.length) { const best = state.swatches.map(s => ({ s, d: dE00(lab, rgbToLab(hexToRgb(s.hex))) })).sort((a, b) => a.d - b.d)[0]; near = `${best.s.name} ΔE ${best.d.toFixed(1)}`; }
+  $('#loupeChip').style.background = hex; $('#loupeHex').textContent = hex; $('#loupeNear').textContent = near || 'click to add';
+  const r = stage.getBoundingClientRect(); let lx = e.clientX - r.left + 16, ly = e.clientY - r.top + 16;
+  if (lx > r.width - 180) lx -= 200; if (ly > r.height - 60) ly -= 76;
+  loupe.style.left = lx + 'px'; loupe.style.top = ly + 'px'; loupe.hidden = false;
+});
+stage.addEventListener('pointerleave', () => { $('#loupe').hidden = true; });
+stage.addEventListener('pointerup', e => {
+  if (!drag) return; const d = drag; drag = null; stage.classList.remove('dragging');
+  if (d.moved) return;
+  const hit = canvasToImage(e); if (!hit) return;
+  const inside = hit.img[0] >= 0 && hit.img[1] >= 0 && hit.img[0] <= 1 && hit.img[1] <= 1;
+  if (state.picking) { if (inside) { const hex = rgbToHex(samplePixel(hit.px)); addSwatch(hex); toast(`Added ${hex}`); } return; }
+  if (state.zoom === 'fit') { if (inside) setZoom('1:1', hit.img); } else setZoom('fit');
+});
+stage.addEventListener('pointercancel', () => { drag = null; stage.classList.remove('dragging'); });
+function setBefore(on) { if (state.before === on) return; state.before = on; refreshStageInfo(); requestDraw(); }
+const bb = $('#btnBefore');
+bb.addEventListener('pointerdown', () => setBefore(true));
+['pointerup', 'pointerleave', 'pointercancel'].forEach(t => bb.addEventListener(t, () => setBefore(false)));
+bb.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setBefore(true); } });
+bb.addEventListener('keyup', () => setBefore(false));
+
+window.addEventListener('keydown', e => {
+  const typing = e.target.closest?.('input,textarea,select,dialog');
+  const mod = e.metaKey || e.ctrlKey;
+  if (e.key === 'Escape' && state.picking) { setPicking(false); return; }
+  if (typing) return;
+  if (e.key === '\\') { setBefore(true); e.preventDefault(); return; }
+  if (mod && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); copySettings(); return; }
+  if (mod && e.shiftKey && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteSettings(); return; }
+  if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); $('#btnSelAll').click(); return; }
+  if (mod) return;
+  if (e.key === 'z' || e.key === 'Z') { setZoom(state.zoom === 'fit' ? '1:1' : 'fit', [0.5, 0.5]); return; }
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+    const i = state.photos.findIndex(p => p.id === state.activeId), j = clamp(i + (e.key === 'ArrowRight' ? 1 : -1), 0, state.photos.length - 1);
+    if (state.photos[j] && j !== i) { e.preventDefault(); setActive(state.photos[j].id); }
+  }
+});
+window.addEventListener('keyup', e => { if (e.key === '\\') setBefore(false); });
+new ResizeObserver(() => requestDraw()).observe(stage);
+function setBusy(t) { const b = $('#busy'); b.hidden = !t; b.textContent = t || ''; }
+
+/* ---------------- sample photos (drawn here, so the page works before you add your own) ---------------- */
+function drawNight(x, w, h) {
+  const R = rng(7), base = h * 0.64;
+  let g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#05060c'); g.addColorStop(0.55, '#1a172d'); g.addColorStop(0.64, '#2b2134'); g.addColorStop(1, '#0a090b');
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  for (let bx = -20; bx < w;) {
+    const bw = 90 + R() * 170, bh = 120 + R() * 280; x.fillStyle = '#0c0b10'; x.fillRect(bx, base - bh, bw, bh + 2);
+    for (let wy = base - bh + 18; wy < base - 24; wy += 26) for (let wx = bx + 12; wx < bx + bw - 16; wx += 22) if (R() < 0.28) { x.fillStyle = R() < 0.8 ? `rgba(255,196,120,${0.45 + R() * 0.5})` : 'rgba(170,190,230,.7)'; x.fillRect(wx, wy, 10, 14); }
+    bx += bw + 4;
+  }
+  g = x.createLinearGradient(0, base, 0, h); g.addColorStop(0, '#17131b'); g.addColorStop(1, '#050405'); x.fillStyle = g; x.fillRect(0, base, w, h - base);
+  for (let i = 0; i < 46; i++) { const px = R() * w, rg = x.createLinearGradient(px, base, px, h); rg.addColorStop(0, 'rgba(255,190,120,.16)'); rg.addColorStop(1, 'rgba(255,190,120,0)'); x.fillStyle = rg; x.fillRect(px - 3, base, 6, h - base); }
+  x.fillStyle = '#0b0a0c'; x.fillRect(w * 0.8, base - 300, 9, 340);
+  let rg = x.createRadialGradient(w * 0.8 + 4, base - 304, 0, w * 0.8 + 4, base - 304, 70); rg.addColorStop(0, 'rgba(255,230,190,.6)'); rg.addColorStop(1, 'rgba(255,200,140,0)');
+  x.fillStyle = rg; x.fillRect(w * 0.8 - 70, base - 374, 150, 140); x.fillStyle = '#fffdf6'; x.beginPath(); x.arc(w * 0.8 + 4, base - 304, 15, 0, 7); x.fill();
+  for (const [y0, sag] of [[h * 0.1, h * 0.15], [h * 0.22, h * 0.12], [h * 0.34, h * 0.08]]) {
+    x.strokeStyle = '#2a231d'; x.lineWidth = 2; x.beginPath();
+    for (let px = -20; px <= w + 20; px += 10) { const t = px / w * 2 - 1, py = y0 + sag * (1 - t * t); px === -20 ? x.moveTo(px, py) : x.lineTo(px, py); } x.stroke();
+    for (let px = 24; px < w; px += 62) {
+      const t = px / w * 2 - 1, py = y0 + sag * (1 - t * t) + 9;
+      rg = x.createRadialGradient(px, py, 0, px, py, 26); rg.addColorStop(0, 'rgba(255,214,150,.55)'); rg.addColorStop(1, 'rgba(255,170,90,0)');
+      x.fillStyle = rg; x.beginPath(); x.arc(px, py, 26, 0, 7); x.fill(); x.fillStyle = '#fffaf0'; x.beginPath(); x.arc(px, py, 5.5, 0, 7); x.fill();
+    }
+  }
+  x.save(); x.font = '700 92px Archivo, Helvetica, Arial, sans-serif'; x.textAlign = 'center';
+  x.shadowColor = '#ff5fae'; x.shadowBlur = 34; x.fillStyle = '#ff8cc6'; x.fillText('OPEN LATE', w * 0.3, base - 80);
+  x.shadowBlur = 0; x.lineWidth = 2.5; x.strokeStyle = '#fff3f9'; x.strokeText('OPEN LATE', w * 0.3, base - 80); x.restore();
+  for (let i = 0; i < 8; i++) { const px = w * 0.42 + i * 78 + R() * 30, ph = 150 + R() * 46; x.fillStyle = '#070608'; x.beginPath(); x.ellipse(px, base + 44 - ph, 16, 20, 0, 0, 7); x.fill(); x.beginPath(); x.roundRect(px - 25, base + 62 - ph, 50, ph, 14); x.fill(); }
+}
+function drawDusk(x, w, h) {
+  const R = rng(11);
+  let g = x.createLinearGradient(0, 0, 0, h * 0.78);
+  [[0, '#2a2244'], [0.35, '#6a4a78'], [0.6, '#c49ab8'], [0.82, '#f2b892'], [1, '#ffe0b0']].forEach(([o, c]) => g.addColorStop(o, c));
+  x.fillStyle = g; x.fillRect(0, 0, w, h);
+  const sx = w * 0.66, sy = h * 0.67;
+  let rg = x.createRadialGradient(sx, sy, 0, sx, sy, 240); rg.addColorStop(0, 'rgba(255,226,180,.65)'); rg.addColorStop(1, 'rgba(255,200,150,0)'); x.fillStyle = rg; x.fillRect(sx - 240, sy - 240, 480, 480);
+  x.fillStyle = '#fffdf4'; x.beginPath(); x.arc(sx, sy, 40, 0, 7); x.fill();
+  const hill = (yb, amp, fr, ph, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(0, h); for (let px = 0; px <= w; px += 8) x.lineTo(px, yb + Math.sin(px * fr + ph) * amp + Math.sin(px * fr * 2.7 + ph * 1.3) * amp * 0.35); x.lineTo(w, h); x.fill(); };
+  hill(h * 0.71, 16, 0.004, 1, '#8a6a84'); hill(h * 0.76, 24, 0.003, 2, '#5a4458');
+  for (let i = 0; i < 4; i++) { const tx = w * (0.12 + i * 0.09) + R() * 40, ty = h * 0.74; x.fillStyle = '#2c2430'; x.fillRect(tx - 4, ty - 70, 8, 80); for (let k = 0; k < 9; k++) { x.beginPath(); x.arc(tx + (R() - 0.5) * 60, ty - 80 - R() * 60, 22 + R() * 16, 0, 7); x.fill(); } }
+  hill(h * 0.84, 28, 0.0025, 4, '#33402a');
+  for (let i = 0; i < 2600; i++) { const px = R() * w, py = h * 0.84 + R() * h * 0.17, l = 10 + R() * 26; x.strokeStyle = R() < 0.7 ? '#26301d' : R() < 0.6 ? '#4b5c30' : '#a99a5a'; x.lineWidth = 1.4; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (R() - 0.5) * 8, py - l); x.stroke(); }
+}
+function drawChart(x, w, h) {
+  const cols = ['#735244', '#C29682', '#627A9D', '#576C43', '#8580B1', '#67BDAA', '#D67E2C', '#505BA6', '#C15A63', '#5E3C6C', '#9DBC40', '#E0A32E', '#383D96', '#469449', '#AF363C', '#E7C71F', '#BB5695', '#0885A1', '#F3F3F2', '#C8C8C8', '#A0A0A0', '#7A7A79', '#555555', '#343434'];
+  x.fillStyle = '#3a3a3a'; x.fillRect(0, 0, w, h);
+  const S = 196, G = 18, x0 = (w - (6 * S + 5 * G)) / 2, y0 = 56;
+  cols.forEach((c, i) => { x.fillStyle = c; x.fillRect(x0 + (i % 6) * (S + G), y0 + Math.floor(i / 6) * (S + G), S, S); });
+  const ry = y0 + 4 * (S + G) + 30, rw = (6 * S + 5 * G) / 11;
+  for (let i = 0; i < 11; i++) { const v = Math.round(i / 10 * 255); x.fillStyle = `rgb(${v},${v},${v})`; x.fillRect(x0 + i * rw, ry, rw + 1, 150); }
+  const bx = x0 + 6 * S + 5 * G + 50; let rg = x.createRadialGradient(bx, ry + 75, 0, bx, ry + 75, 30); rg.addColorStop(0, '#fff'); rg.addColorStop(0.5, '#fff'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+  x.fillStyle = rg; x.fillRect(bx - 30, ry + 45, 60, 60);
+}
+function sampleFile(fn, name) {
+  const c = document.createElement('canvas'); c.width = 1800; c.height = 1200; fn(c.getContext('2d'), 1800, 1200);
+  return new Promise(res => c.toBlob(b => res(new File([b], name, { type: 'image/jpeg' })), 'image/jpeg', 0.93));
+}
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  if (!gl) { $('#stage').innerHTML = '<div class="fatal"><b>This browser can’t run the film engine.</b><p class="hint">Safelight needs WebGL 2. Try a recent Chrome, Edge, Firefox or Safari.</p></div>'; return; }
+  try { initGL(); } catch (e) { $('#stage').innerHTML = `<div class="fatal"><b>The film engine didn’t start.</b><p class="hint">${esc(e.message)}</p></div>`; return; }
+  canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The graphics card reset. Reload the page to keep editing.', 8000); });
+  buildPanels(); renderPresets(); renderSwatchList(); updateStageCursor(); $('#cmp').hidden = !state.showCmp;
+  const ok = await DB.open();
+  if (ok) {
+    for (const l of (await DB.all('luts')) || []) LUTS.set(l.id, { ...l, custom: true });
+    if (LUTS.size) buildStockList();
+  }
+  const recs = ok ? ((await DB.all('photos')) || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : [];
+  if (recs.length) addPhotos(recs, { persist: false });
+  else {
+    try { await Promise.race([document.fonts?.load('700 92px Archivo'), new Promise(r => setTimeout(r, 1200))]); } catch {}
+    const files = await Promise.all([sampleFile(drawNight, 'String lights at night.jpg'), sampleFile(drawDusk, 'Dusk field.jpg'), sampleFile(drawChart, 'Colour chart.jpg')]);
+    const added = addPhotos(files.map(f => ({ blob: f, name: f.name, sample: true })));
+    added[0].settings = { ...DEFAULTS, ...BUILTIN_PRESETS[2].s };
+    added[1].settings = { ...DEFAULTS, ...BUILTIN_PRESETS[0].s };
+    added.forEach(persistSoon);
+  }
+  if (state.activeId) setActive(state.activeId);
+  refreshLibraryUI(); syncControls(); requestDraw();
+}
+boot();
+</script>
+
+</body>
+</html>
