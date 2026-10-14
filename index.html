@@ -263,6 +263,10 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
   <header class="top">
     <div class="brand"><span class="brand-mark" aria-hidden="true"></span><b>Safelight</b><span class="sub">Film Lab</span></div>
     <div class="top-actions">
+      <div class="zoomgrp" role="group" aria-label="Undo and redo">
+        <button class="btn ghost" id="btnUndo" type="button" title="Undo (Ctrl/Cmd + Z)" disabled>Undo</button>
+        <button class="btn ghost" id="btnRedo" type="button" title="Redo (Ctrl/Cmd + Shift + Z)" disabled>Redo</button>
+      </div>
       <label class="btn" for="fileIn">Import photos</label>
       <input type="file" id="fileIn" multiple accept="image/*" hidden>
       <button class="btn ghost" id="btnBefore" type="button" title="Hold to see the original. Shortcut: hold \">Hold for before</button>
@@ -1412,15 +1416,53 @@ function refreshScopeUI() {
 document.querySelectorAll('input[name=editScope]').forEach(r => r.addEventListener('change', () => {
   state.editScope = r.value; prefs.set('editScope', state.editScope); refreshLibraryUI(); refreshStageInfo();
 }));
+/* ---- undo / redo: each step stores the settings of the photos it changed. A slider drag (or typing the
+   date) is one step: changes to the same control merge until you pause or touch another control. ---- */
+const undoHist = { undo: [], redo: [], open: null, timer: 0 };
+const snapshot = ps => new Map(ps.map(p => [p.id, { ...p.settings }]));
+function beginStep(ps, label, mergeKey) {
+  const h = undoHist.open;
+  if (h && mergeKey && h.mergeKey === mergeKey) { ps.forEach(p => { if (!h.before.has(p.id)) h.before.set(p.id, { ...p.settings }); }); }
+  else { closeStep(); undoHist.open = { label, mergeKey, before: snapshot(ps) }; undoHist.redo = []; }
+  clearTimeout(undoHist.timer);
+  undoHist.timer = setTimeout(closeStep, mergeKey ? 900 : 0);
+  syncUndoUI();
+}
+function closeStep() {
+  clearTimeout(undoHist.timer);
+  if (undoHist.open) { undoHist.undo.push(undoHist.open); if (undoHist.undo.length > 100) undoHist.undo.shift(); undoHist.open = null; }
+  syncUndoUI();
+}
+function restoreStep(step, from, to, verb) {
+  const ps = [...step.before.keys()].map(byId).filter(Boolean);
+  if (!ps.length) { toast(`Nothing to ${verb.toLowerCase()}: those photos were removed`); return; }
+  to.push({ label: step.label, before: snapshot(ps) });
+  ps.forEach(p => { p.settings = { ...DEFAULTS, ...step.before.get(p.id) }; persistSoon(p); });
+  syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette(); syncUndoUI();
+  toast(`${verb} ${step.label}${ps.length > 1 ? ` on ${ps.length} photos` : ''}`);
+}
+function undo() { closeStep(); const st = undoHist.undo.pop(); if (st) restoreStep(st, undoHist.undo, undoHist.redo, 'Undid'); }
+function redo() { closeStep(); const st = undoHist.redo.pop(); if (st) restoreStep(st, undoHist.redo, undoHist.undo, 'Redid'); }
+function syncUndoUI() {
+  const u = $('#btnUndo'), r = $('#btnRedo'); if (!u) return;
+  const last = undoHist.open || undoHist.undo[undoHist.undo.length - 1], next = undoHist.redo[undoHist.redo.length - 1];
+  u.disabled = !last; u.title = last ? `Undo ${last.label} (Ctrl/Cmd + Z)` : 'Nothing to undo';
+  r.disabled = !next; r.title = next ? `Redo ${next.label} (Ctrl/Cmd + Shift + Z)` : 'Nothing to redo';
+}
+$('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
+const stepLabel = key => SLIDERS[key] ? SLIDERS[key][1].toLowerCase() : { stock: 'film look', dateText: 'date text', texSeed: 'pattern shuffle' }[key] || key;
 function applySetting(key, val) {
   const ts = targets(); if (!ts.length) return;
+  beginStep(ts, stepLabel(key), 'set:' + key + ':' + ts.map(p => p.id).join(','));
   ts.forEach(p => { p.settings[key] = val; persistSoon(p); });
   const sl = SLIDERS[key];
   if (sl) { const row = document.querySelector(`.sl[data-key="${key}"]`); if (row) { row.querySelector('.val').textContent = sl[6] ? sl[6](val) : (sl[2] < 0 ? pm(val) : Math.round(val)); row.classList.toggle('is-default', val === sl[5]); } }
   if (key === 'stock') refreshStageInfo();
   requestDraw(); queueThumbs(ts); schedulePalette();
 }
-function applySettingsTo(ps, settings, label) {
+function applySettingsTo(ps, settings, label, stepName) {
+  if (!ps.length) return;
+  beginStep(ps, stepName || 'change', null); closeStep();
   ps.forEach(p => { p.settings = { ...DEFAULTS, ...settings }; persistSoon(p); });
   syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette();
   if (label) toast(label);
@@ -1430,13 +1472,13 @@ function applySettingsTo(ps, settings, label) {
 $('#btnSelAll').onclick = () => { state.selected = new Set(state.photos.map(p => p.id)); refreshLibraryUI(); };
 $('#btnSelOne').onclick = () => { if (state.activeId) { state.selected = new Set([state.activeId]); refreshLibraryUI(); } };
 function copySettings() { const p = active(); if (!p) return; state.clip = { ...p.settings }; refreshLibraryUI(); toast('Settings copied'); }
-function pasteSettings() { if (!state.clip) return; const ps = targets(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`); }
+function pasteSettings() { if (!state.clip) return; const ps = targets(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`, 'paste'); }
 $('#btnCopy').onclick = copySettings; $('#btnPaste').onclick = pasteSettings;
-$('#btnSync').onclick = () => { const p = active(); if (!p) return; const ps = selectedPhotos().filter(q => q !== p); applySettingsTo(ps, p.settings, `Matched ${ps.length} photo${ps.length === 1 ? '' : 's'} to this one`); };
+$('#btnSync').onclick = () => { const p = active(); if (!p) return; const ps = selectedPhotos().filter(q => q !== p); applySettingsTo(ps, p.settings, `Matched ${ps.length} photo${ps.length === 1 ? '' : 's'} to this one`, 'match'); };
 $('#btnRemove').onclick = () => { const n = state.selected.size; $('#removeText').textContent = `Remove ${n} photo${n === 1 ? '' : 's'} from the library? Your original files aren’t touched.`; $('#removeConfirm').hidden = false; };
 $('#removeNo').onclick = () => { $('#removeConfirm').hidden = true; };
 $('#removeYes').onclick = () => { $('#removeConfirm').hidden = true; removePhotos([...state.selected]); };
-$('#btnReset').onclick = () => { const ts = targets(); applySettingsTo(ts, {}, ts.length > 1 ? `Reset ${ts.length} photos` : 'Photo reset'); };
+$('#btnReset').onclick = () => { const ts = targets(); applySettingsTo(ts, {}, ts.length > 1 ? `Reset ${ts.length} photos` : 'Photo reset', 'reset'); };
 
 function importFiles(list) {
   const files = [...list].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|avif|gif|bmp|heic)$/i.test(f.name));
@@ -1470,7 +1512,7 @@ $('#presetList').addEventListener('click', e => {
   const b = e.target.closest('.preset'); if (!b) return;
   const all = [...BUILTIN_PRESETS, ...state.userPresets], pr = all[+b.dataset.i];
   const ps = targets(); if (!ps.length) return;
-  applySettingsTo(ps, pr.s, `“${pr.name}” applied to ${ps.length} photo${ps.length === 1 ? '' : 's'}`);
+  applySettingsTo(ps, pr.s, `“${pr.name}” applied to ${ps.length} photo${ps.length === 1 ? '' : 's'}. Ctrl/Cmd + Z to undo.`, `preset “${pr.name}”`);
 });
 $('#presetSave').onclick = () => {
   const p = active(); if (!p) return;
@@ -1877,6 +1919,8 @@ window.addEventListener('keydown', e => {
     if (state.photos[j] && j !== i) setActive(state.photos[j].id);
     return;
   }
+  if (mod && e.key.toLowerCase() === 'z' && (!typing || onSlider)) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if (mod && e.key.toLowerCase() === 'y' && (!typing || onSlider)) { e.preventDefault(); redo(); return; }
   if (typing) return;
   if (e.key === '\\') { setBefore(true); e.preventDefault(); return; }
   if (mod && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); copySettings(); return; }
