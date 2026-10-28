@@ -24,6 +24,7 @@
   --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
   --r:8px;
 }
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:13px;line-height:1.4;font-variation-settings:"wdth" 100}
 *,*::before,*::after{box-sizing:border-box}
@@ -32,8 +33,10 @@ button,input,select{font:inherit;color:inherit}
 
 .app{height:100%;display:grid;gap:10px;padding:10px 16px;
   grid-template-columns:250px minmax(0,1fr) 296px;
-  grid-template-rows:auto minmax(0,1fr) auto auto;
-  grid-template-areas:"top top top" "left stage right" "left cmp right" "left film right"}
+  grid-template-rows:auto minmax(0,1fr) auto auto auto;
+  grid-template-areas:"top top top" "left stage right" "left cmp right" "left bar right" "left film right"}
+.app.v-grid .stage,.app.v-grid .cmp,.app.v-grid .film{display:none}
+.app:not(.v-grid) .grid,.app:not(.v-grid) #thumbSize{display:none}
 .top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:baseline;gap:8px}
 .brand-mark{width:10px;height:10px;border-radius:50%;background:var(--safelight);box-shadow:0 0 12px 2px var(--safelight-soft);align-self:center}
@@ -213,6 +216,85 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(-
 .frame .edge em{font-style:normal;color:var(--muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frame .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--edge);box-shadow:0 0 0 2px rgba(0,0,0,.5)}
 .frame .pending{position:absolute;inset:0 0 16px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:10px;font-family:var(--f-mono)}
+.frame.rej canvas,.cell.rej canvas{opacity:.35}
+.frame .badges,.cell .badges{position:absolute;left:4px;top:4px;display:flex;gap:3px;pointer-events:none}
+.frame .lo{position:absolute;left:4px;right:4px;top:60px;display:flex;justify-content:space-between;align-items:flex-end;pointer-events:none;gap:4px}
+.bdg{font-family:var(--f-mono);font-size:9px;line-height:1;padding:2px 4px;border-radius:3px;background:rgba(0,0,0,.72);color:#e7e5e2;white-space:nowrap}
+.bdg.ref{background:var(--safelight);color:#1a0d09;font-weight:600}
+.bdg.pick{background:var(--ok);color:#10200f;font-weight:600}
+.bdg.rej{color:var(--safelight)}
+.bdg.ok{color:var(--ok)} .bdg.warn{color:var(--warn)} .bdg.far{color:var(--safelight)}
+.bdg.stars{color:var(--edge);letter-spacing:-.05em}
+.bdg.alike{color:#b9a7ff}
+
+/* library bar: views, filters, sort */
+.libbar{grid-area:bar;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.libbar select{height:26px;border-radius:6px;border:1px solid var(--line);background:var(--panel-2);padding:0 6px;font-size:12px;max-width:150px}
+.libbar select.on{border-color:var(--safelight)}
+.libbar .count{font-family:var(--f-mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.libbar .spacer{flex:1}
+.libbar .check{align-items:center;font-size:12px;color:var(--muted);white-space:nowrap}
+.libbar .check input{margin:0}
+.libbar input[type=range]{width:90px}
+.cohsum{font-family:var(--f-mono);font-size:11px;background:none;border:1px solid var(--line);border-radius:6px;height:26px;padding:0 8px;cursor:pointer;color:var(--muted);white-space:nowrap}
+.cohsum:hover{color:var(--fg);border-color:#55555a}
+.cohsum b{font-weight:500}
+
+/* grid view */
+.grid{grid-area:stage;position:relative;background:var(--stage);border-radius:var(--r);overflow-y:auto;min-height:0;padding:12px;--cell:190px;scrollbar-width:thin;scrollbar-color:#444 transparent}
+.grid-track{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cell),1fr));gap:10px}
+.cell{position:relative;display:flex;flex-direction:column;gap:6px;padding:7px;border-radius:6px;background:var(--panel);border:1px solid transparent;cursor:pointer;min-width:0;user-select:none}
+.cell:hover{border-color:var(--line)}
+.cell.sel{border-color:rgba(226,88,60,.45);background:#2a2321}
+.cell.active{border-color:var(--safelight)}
+.cell .ph{position:relative;aspect-ratio:3/2;background:#0d0c0b;border-radius:3px;overflow:hidden}
+.cell canvas{width:100%;height:100%;object-fit:contain;display:block}
+.cell .ph .bcoh{position:absolute;right:4px;bottom:4px;pointer-events:none}
+.cell .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--edge);box-shadow:0 0 0 2px rgba(0,0,0,.5)}
+.cell .meta{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);min-width:0}
+.cell .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rate{display:inline-flex;flex:none}
+.rate button{background:none;border:0;padding:0 1px;color:#4a4845;cursor:pointer;font-size:13px;line-height:1}
+.rate button.on{color:var(--edge)}
+.rate button:hover{color:var(--fg)}
+.grid-empty{color:var(--muted);text-align:center;padding:40px 20px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.dropping .grid::after{content:"Drop to add to the library";position:absolute;inset:8px;border:2px dashed var(--safelight);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:15px;background:rgba(18,18,19,.7)}
+
+/* compare and survey: one label box per photo on the stage */
+.cells{position:absolute;inset:0;pointer-events:none}
+.cellbox{position:absolute;border:2px solid transparent;border-radius:3px}
+.cellbox.on{border-color:var(--safelight)}
+.cellbox .tags{position:absolute;left:8px;top:8px;display:flex;gap:5px;flex-wrap:wrap;max-width:calc(100% - 16px)}
+.cellbox .acts{position:absolute;right:8px;bottom:8px;display:flex;gap:5px;pointer-events:auto}
+.cellbox .acts .btn{background:rgba(10,10,10,.78);backdrop-filter:blur(6px)}
+.cellbox .acts .btn.picked{border-color:var(--ok);color:var(--ok)}
+.cellbox .acts .btn.rejected{border-color:var(--safelight);color:var(--safelight)}
+
+/* right-click menu */
+.ctx{position:fixed;z-index:60;min-width:220px;background:#262628;border:1px solid var(--line);border-radius:8px;padding:5px;box-shadow:0 12px 32px rgba(0,0,0,.5);display:flex;flex-direction:column}
+.ctx button{display:flex;justify-content:space-between;gap:18px;align-items:center;background:none;border:0;border-radius:5px;padding:6px 9px;text-align:left;cursor:pointer;font-size:12.5px}
+.ctx button:hover,.ctx button:focus-visible{background:var(--safelight-soft);outline:none}
+.ctx button:disabled{opacity:.4;cursor:default;background:none}
+.ctx kbd{font-family:var(--f-mono);font-size:10.5px;color:var(--dim)}
+.ctx .danger{color:#ff9a85}
+.ctx hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.ctx .ctx-head{font-size:11px;color:var(--muted);padding:4px 9px 2px}
+.ctx .rate-row{display:flex;gap:2px;padding:2px 6px 4px}
+.ctx .rate-row button{padding:4px 6px;font-size:15px;color:#4a4845}
+.ctx .rate-row button.on{color:var(--edge)}
+.ctx .rate-row button.clear{font-size:11px;color:var(--muted)}
+
+/* reference panel inside Pregrade */
+.refinfo{background:var(--panel-2);border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:5px;font-size:12px}
+.refinfo .score{display:flex;align-items:baseline;gap:8px}
+.refinfo .score b{font-family:var(--f-mono);font-size:18px;font-weight:500}
+.refinfo ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2px;color:var(--muted)}
+.refinfo li{display:flex;justify-content:space-between;gap:8px}
+.refinfo li span:last-child{color:var(--fg)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px;margin:0}
+.keys dt{font-family:var(--f-mono);font-size:11.5px;color:var(--edge);white-space:nowrap}
+.keys dd{margin:0;color:#d3d1cd}
+.keys h3{grid-column:1/-1;margin:8px 0 0;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600}
 
 /* export dialog */
 dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:0;width:min(440px,calc(100vw - 32px))}
@@ -233,7 +315,8 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
 .progress i{display:block;height:100%;width:0;background:var(--safelight);transition:width .2s}
 
 .toasts{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:50;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
-.toast{background:#f1efeb;color:#1a1a1b;border-radius:6px;padding:8px 12px;font-size:12.5px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+.toast{background:#f1efeb;color:#1a1a1b;border-radius:6px;padding:8px 12px;font-size:12.5px;box-shadow:0 6px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px}
+.toast-act{pointer-events:auto;background:none;border:0;padding:0;font-weight:650;color:#b2361c;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .fatal{padding:24px;max-width:60ch}
 
 @media (max-width:1100px){
@@ -242,8 +325,9 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
 @media (max-width:900px){
   html,body{height:auto}
   .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;
-    grid-template-areas:"top" "stage" "cmp" "film" "right" "left"}
+    grid-template-areas:"top" "stage" "cmp" "bar" "film" "right" "left"}
   .stage{height:clamp(260px,78vw,58vh)}
+  .grid{max-height:75vh;--cell:140px}
   .panel{overflow:visible}
   .cmp{grid-template-columns:minmax(0,1fr)}
   .panel-foot{position:static}
@@ -267,6 +351,7 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
         <button class="btn ghost" id="btnZoom" type="button" title="Switch between fit and 100% (Z). Pinch or Ctrl/Cmd-scroll on the photo to zoom.">Fit</button>
         <button class="btn ghost" id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in ( + )">+</button>
       </div>
+      <button class="btn ghost" id="btnKeys" type="button" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       <button class="btn primary" id="btnExport" type="button">Export…</button>
     </div>
   </header>
@@ -281,18 +366,16 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
           <button class="btn small" id="btnSelOne" type="button">Select one</button>
           <button class="btn small" id="btnCopy" type="button" title="Ctrl/Cmd + Shift + C">Copy settings</button>
           <button class="btn small" id="btnPaste" type="button" title="Ctrl/Cmd + Shift + V">Paste settings</button>
-          <button class="btn small" id="btnSync" type="button">Match selected</button>
-          <button class="btn small" id="btnRemove" type="button">Remove</button>
-        </div>
-        <div class="confirm" id="removeConfirm" hidden>
-          <span id="removeText">Remove these photos?</span>
-          <div class="btn-row"><button class="btn small primary" id="removeYes" type="button">Remove</button><button class="btn small" id="removeNo" type="button">Keep them</button></div>
+          <button class="btn small" id="btnSync" type="button" title="Give the selected photos this photo’s look. Each keeps its own pregrade.">Match selected</button>
+          <button class="btn small" id="btnVariant" type="button" title="A second version of the same file with its own edits (Ctrl/Cmd + ')">Make a variant</button>
+          <button class="btn small" id="btnRef" type="button" title="The photo the others are measured and matched against (R)">Set reference</button>
+          <button class="btn small" id="btnRemove" type="button" title="Delete or Backspace. Ctrl/Cmd + Z brings them back.">Delete</button>
         </div>
         <div class="btn-row">
           <label class="btn small" for="folderIn">Import a folder</label>
           <input type="file" id="folderIn" webkitdirectory multiple hidden>
         </div>
-        <p class="fineprint">Photos stay in this browser. Nothing is uploaded. Click a frame to edit it; Ctrl/Cmd-click or Shift-click to select several.</p>
+        <p class="fineprint">Photos stay in this browser. Nothing is uploaded, and deleting only takes a photo out of the library. Click a frame to edit it; Ctrl/Cmd-click or Shift-click to select several; right-click for more.</p>
       </div>
     </details>
     <details open>
@@ -330,9 +413,12 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
     <canvas id="view"></canvas>
     <div class="stage-info" id="stageInfo"></div>
     <div class="empty" id="empty" hidden><b>Your library is empty</b><span>Drop photos here or use Import photos. JPEG, PNG and WebP work.</span></div>
+    <div class="cells" id="cells"></div>
     <div class="loupe" id="loupe" hidden><i id="loupeChip"></i><b id="loupeHex"></b><span id="loupeNear"></span></div>
     <div class="busy" id="busy" hidden></div>
   </main>
+
+  <section class="grid" id="grid" aria-label="Library grid"><div class="grid-track" id="gridTrack"></div><div class="grid-empty" id="gridEmpty" hidden></div></section>
 
   <section class="cmp" id="cmp" aria-label="Colour check">
     <div>
@@ -346,6 +432,34 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
         <div class="bar-row"><span>after</span><div class="bar" id="barAfter"></div></div>
       </div>
     </div>
+  </section>
+
+  <section class="libbar" aria-label="Views and filters">
+    <div class="zoomgrp" role="group" aria-label="View" id="viewSeg">
+      <button class="btn small" type="button" data-view="loupe" title="One photo, big (E)">Loupe</button>
+      <button class="btn small" type="button" data-view="grid" title="Every photo at once (G)">Grid</button>
+      <button class="btn small" type="button" data-view="compare" title="Two selected photos side by side, or before and after (C)">Compare</button>
+      <button class="btn small" type="button" data-view="survey" title="All selected photos side by side, to choose between them (N)">Survey</button>
+    </div>
+    <select id="fFlag" aria-label="Show by flag">
+      <option value="any">Any flag</option><option value="picks">Picks</option><option value="norej">Hide rejects</option><option value="unflagged">Unflagged</option><option value="rejected">Rejected</option>
+    </select>
+    <select id="fStars" aria-label="Show by rating">
+      <option value="0">Any rating</option><option value="1">★ and up</option><option value="2">★★ and up</option><option value="3">★★★ and up</option><option value="4">★★★★ and up</option><option value="5">★★★★★</option><option value="-1">Unrated</option>
+    </select>
+    <select id="fEdit" aria-label="Show by edit">
+      <option value="any">Edited or not</option><option value="edited">Edited</option><option value="unedited">Not edited</option><option value="variants">Has variants</option><option value="alike">Look-alikes</option>
+    </select>
+    <select id="sortBy" aria-label="Sort">
+      <option value="order">As imported</option><option value="name">By name</option><option value="alike">Look-alikes together</option><option value="rating">Rating, best first</option><option value="coh">Least cohesive first</option>
+    </select>
+    <button class="linkbtn" id="fClear" type="button" hidden>Clear filters</button>
+    <span class="count" id="libCount"></span>
+    <span class="spacer"></span>
+    <button class="cohsum" id="cohSum" type="button" hidden title="Sort by cohesion, least cohesive first"></button>
+    <label class="check" title="Show each photo’s cohesion score on its thumbnail"><input type="checkbox" id="cohShow"> <span>Scores</span></label>
+    <label class="check" title="After rating or flagging, move to the next photo"><input type="checkbox" id="autoAdv"> <span>Auto-advance</span></label>
+    <input type="range" id="thumbSize" min="120" max="360" step="10" value="190" aria-label="Thumbnail size" title="Thumbnail size">
   </section>
 
   <section class="film" aria-label="Filmstrip"><div class="film-track" id="filmTrack"></div></section>
@@ -371,11 +485,7 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
   <form class="dlg" id="exportForm" method="dialog">
     <h2>Export graded photos</h2>
     <div class="field"><span>Photos</span>
-      <div class="seg" id="scopeSeg">
-        <label><input type="radio" name="scope" value="active"><span id="scopeActive">This photo</span></label>
-        <label><input type="radio" name="scope" value="selected" checked><span id="scopeSel">Selected</span></label>
-        <label><input type="radio" name="scope" value="all"><span id="scopeAll">All</span></label>
-      </div>
+      <div class="seg" id="scopeSeg"></div>
     </div>
     <div class="field"><span>Size</span>
       <select id="exSize" aria-label="Size">
@@ -404,6 +514,32 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
     </div>
   </form>
 </dialog>
+<dialog id="keysDlg">
+  <form class="dlg" method="dialog">
+    <h2>Keyboard shortcuts</h2>
+    <dl class="keys">
+      <h3>Moving around</h3>
+      <dt>← →</dt><dd>Previous or next photo (↑ ↓ too in the grid)</dd>
+      <dt>E · G · C · N</dt><dd>Loupe, grid, compare, survey</dd>
+      <dt>Enter · Esc</dt><dd>Open the photo from the grid · back to loupe</dd>
+      <dt>Z · + · −</dt><dd>Fit or 100%, zoom in, zoom out</dd>
+      <dt>\ (hold)</dt><dd>See the original</dd>
+      <h3>Choosing selects</h3>
+      <dt>1 – 5 · 0</dt><dd>Star rating, or clear it</dd>
+      <dt>P · X · U</dt><dd>Pick, reject, unflag</dd>
+      <dt>R</dt><dd>Set or clear the reference photo</dd>
+      <h3>Editing</h3>
+      <dt>Ctrl/Cmd Z</dt><dd>Undo, including deletes (Shift for redo)</dd>
+      <dt>Ctrl/Cmd Shift C · V</dt><dd>Copy and paste a look</dd>
+      <dt>Ctrl/Cmd '</dt><dd>Make a variant</dd>
+      <dt>Ctrl/Cmd A</dt><dd>Select every photo showing</dd>
+      <dt>Delete</dt><dd>Delete from the library</dd>
+      <dt>Right-click</dt><dd>Everything else for that photo</dd>
+    </dl>
+    <div class="dlg-foot"><button class="btn primary" value="close" type="submit">Done</button></div>
+  </form>
+</dialog>
+<div class="ctx" id="ctx" role="menu" hidden></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
@@ -426,8 +562,12 @@ const prefs = {
   get(k, d) { try { const v = localStorage.getItem('safelight:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('safelight:' + k, JSON.stringify(v)); } catch {} }
 };
-function toast(msg, ms = 3200) {
+function toast(msg, ms = 3200, action) {
   const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  if (action) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
+    b.onclick = () => { t.remove(); action.fn(); }; t.appendChild(b); ms = Math.max(ms, 6500);
+  }
   $('#toasts').appendChild(t); setTimeout(() => t.remove(), ms);
 }
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -583,9 +723,18 @@ async function parseHald(file) {
 
 /* ---------------- settings ---------------- */
 const pm = v => (v > 0 ? '+' : '') + Math.round(v);
+const fmtEV = v => (v > 0 ? '+' : '') + v.toFixed(2) + ' EV';
+// Pregrade: per-photo corrections that sit under the look (levels, then saturation, then white balance and exposure).
+// They stay with each photo, so pasting, syncing or applying a preset never carries them across.
+const BASE_GROUP = { id: 'base', title: 'Pregrade', sliders: [
+  ['bExposure', 'Exposure', -3, 3, 0.01, 0, fmtEV], ['bTemp', 'Temperature', -100, 100, 1, 0], ['bTint', 'Tint', -100, 100, 1, 0],
+  ['bBlack', 'Black level', -100, 100, 1, 0], ['bWhite', 'White level', -100, 100, 1, 0], ['bSat', 'Saturation', -100, 100, 1, 0]] };
+const BASE_KEYS = BASE_GROUP.sliders.map(s => s[0]);
+const pickBase = s => Object.fromEntries(BASE_KEYS.map(k => [k, s[k]]));
+const stripBase = s => { const o = { ...s }; BASE_KEYS.forEach(k => delete o[k]); return o; };
 const GROUPS = [
   { id: 'light', title: 'Light', sliders: [
-    ['exposure', 'Exposure', -3, 3, 0.05, 0, v => (v > 0 ? '+' : '') + v.toFixed(2) + ' EV'],
+    ['exposure', 'Exposure', -3, 3, 0.05, 0, fmtEV],
     ['contrast', 'Contrast', -100, 100, 1, 0], ['highlights', 'Highlights', -100, 100, 1, 0], ['shadows', 'Shadows', -100, 100, 1, 0],
     ['whites', 'Whites', -100, 100, 1, 0], ['blacks', 'Blacks', -100, 100, 1, 0]] },
   { id: 'colour', title: 'Colour', sliders: [
@@ -607,7 +756,7 @@ const GROUPS = [
   { id: 'vignette', title: 'Vignette', sliders: [
     ['vignette', 'Amount', -100, 100, 1, 0], ['vigMid', 'Midpoint', 0, 100, 1, 50], ['vigFeather', 'Feather', 0, 100, 1, 50]] },
 ];
-const SLIDERS = {}; GROUPS.forEach(g => g.sliders.forEach(s => SLIDERS[s[0]] = s));
+const SLIDERS = {}; [BASE_GROUP, ...GROUPS].forEach(g => g.sliders.forEach(s => SLIDERS[s[0]] = s));
 SLIDERS.strength = ['strength', 'Film strength', 0, 100, 1, 100, v => Math.round(v) + '%'];
 const DEFAULTS = { stock: 'none' };
 Object.values(SLIDERS).forEach(s => DEFAULTS[s[0]] = s[5]);
@@ -637,10 +786,43 @@ const state = {
   userPresets: prefs.get('presets', []),
   showCmp: prefs.get('showCmp', true),
   clip: null, palette: null, lutQuery: '', lutOpen: new Set(),
+  view: prefs.get('view', 'loupe'), filter: { flag: 'any', stars: 0, edit: 'any', ...prefs.get('filter', {}) }, sort: prefs.get('sort', 'order'),
+  refId: prefs.get('refId', null), showCoh: prefs.get('showCoh', true), autoAdvance: prefs.get('autoAdvance', false),
+  thumbSize: prefs.get('thumbSize', 190), pair: [], cells: [],
 };
 const byId = id => state.photos.find(p => p.id === id);
 const active = () => byId(state.activeId);
-const selectedPhotos = () => state.photos.filter(p => state.selected.has(p.id));
+const selectedPhotos = () => visiblePhotos().filter(p => state.selected.has(p.id));
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+/* ---------------- what's showing: filters and sort (they apply to the filmstrip, grid and arrow keys) ---------------- */
+const filterActive = () => state.filter.flag !== 'any' || +state.filter.stars !== 0 || state.filter.edit !== 'any';
+function passes(p) {
+  const f = state.filter, st = +f.stars;
+  if (f.flag === 'picks' && p.flag !== 1) return false;
+  if (f.flag === 'norej' && p.flag === -1) return false;
+  if (f.flag === 'unflagged' && p.flag !== 0) return false;
+  if (f.flag === 'rejected' && p.flag !== -1) return false;
+  if (st > 0 && p.rating < st) return false;
+  if (st < 0 && p.rating > 0) return false;
+  if (f.edit === 'edited' && !isEdited(p.settings)) return false;
+  if (f.edit === 'unedited' && isEdited(p.settings)) return false;
+  if (f.edit === 'variants' && !state.photos.some(q => q !== p && (q.variantOf || q.id) === (p.variantOf || p.id))) return false;
+  if (f.edit === 'alike' && !p.sim) return false;
+  return true;
+}
+function visiblePhotos() {
+  const ps = state.photos.filter(passes);
+  if (state.sort === 'name') ps.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }) || (a.vnum || 1) - (b.vnum || 1));
+  else if (state.sort === 'rating') ps.sort((a, b) => b.rating - a.rating || b.flag - a.flag || a.order - b.order);
+  else if (state.sort === 'alike') {   // each set of look-alikes sits where its first photo is
+    const first = new Map(); for (const q of ps) if (q.sim && !first.has(q.sim)) first.set(q.sim, q.order);
+    const at = q => q.sim ? first.get(q.sim) : q.order;
+    ps.sort((a, b) => at(a) - at(b) || (a.sim || 0) - (b.sim || 0) || a.order - b.order);
+  }
+  else if (state.sort === 'coh') ps.sort((a, b) => (a.coh ? a.coh.score : 101) - (b.coh ? b.coh.score : 101) || a.order - b.order);
+  return ps;
+}
 
 /* ---------------- WebGL ---------------- */
 const canvas = $('#view');
@@ -659,8 +841,8 @@ vec3 toEnc(vec3 l){ l = max(l, 0.); return mix(l*12.92, 1.055*pow(l, vec3(1./2.4
 // Highlight energy. Clipped pixels are assumed to be far brighter than white, the way real light sources are.
 const FS_MASK = COMMON + `
 in vec2 v_uv; out vec4 o;
-uniform sampler2D u_src; uniform float u_lod; uniform vec2 u_texel; uniform vec3 u_gain; uniform float u_thr, u_scale;
-vec3 expand(vec3 c){ float m = max(max(c.r,c.g),c.b); return toLin(c)*(1.0 + 7.0*smoothstep(0.9, 1.0, m)); }
+uniform sampler2D u_src; uniform float u_lod; uniform vec2 u_texel; uniform vec3 u_gain; uniform float u_thr, u_scale; uniform vec2 u_bLev;
+vec3 expand(vec3 c){ float m = max(max(c.r,c.g),c.b); return max(toLin(c)-u_bLev.x, 0.)/(u_bLev.y-u_bLev.x)*(1.0 + 7.0*smoothstep(0.9, 1.0, m)); }
 void main(){
   vec2 img = vec2(v_uv.x, 1.0-v_uv.y);
   vec2 d = u_texel*exp2(u_lod)*0.5;
@@ -683,7 +865,7 @@ const FS_MAIN = COMMON + `
 in vec2 v_uv; out vec4 o;
 uniform sampler2D u_src, u_glow; uniform sampler3D u_lut;
 uniform vec4 u_view; uniform vec3 u_bg; uniform bool u_bypass;
-uniform vec3 u_gain;
+uniform vec3 u_gain; uniform vec2 u_bLev; uniform float u_bSat;
 uniform float u_contrast, u_highlights, u_shadows, u_whites, u_blacks;
 uniform bool u_hasLut; uniform float u_lutMix, u_lutSize;
 uniform float u_sat, u_vib, u_fade;
@@ -767,7 +949,8 @@ void main(){
   if(u_bypass){ o = vec4(texture(u_src, img).rgb, 1.); return; }
   vec3 src = srcSample(img);
   vec2 Q = u_fullRes/min(u_fullRes.x, u_fullRes.y), q = img*Q;
-  vec3 lin = toLin(src)*u_gain;
+  vec3 lin = max(toLin(src) - u_bLev.x, 0.)/(u_bLev.y - u_bLev.x);   // pregrade levels, then saturation
+  lin = max(mix(vec3(dot(lin, LW)), lin, u_bSat), 0.)*u_gain;
   if(u_vig != 0.){ float r = length((img-0.5)*2.0)*0.70710678; lin *= max(0., 1.0 + u_vig*smoothstep(u_vigMid, u_vigMid+u_vigFeather, r)); }
   if(u_hasGlow){
     vec2 g = vec2(img.x, 1.0-img.y);
@@ -945,11 +1128,14 @@ function glowBufs(w, h) {
   }
   return g;
 }
+// Pregrade and develop white balance stack: the gains are exponential, so adding the two sliders multiplies them.
 function wbGain(s) {
-  const t = s.temp / 100, m = s.tint / 100;
-  const g = [2 ** (0.32 * t), 2 ** (-0.22 * m), 2 ** (-0.32 * t)], L = luma(g), ev = 2 ** s.exposure;
+  const t = (s.temp + (s.bTemp || 0)) / 100, m = (s.tint + (s.bTint || 0)) / 100;
+  const g = [2 ** (0.32 * t), 2 ** (-0.22 * m), 2 ** (-0.32 * t)], L = luma(g), ev = 2 ** (s.exposure + (s.bExposure || 0));
   return g.map(x => x / L * ev);
 }
+// Black level +100 lifts the black point by 0.08 (linear); white level +100 puts white at 0.6, so the image brightens.
+function baseLevels(s) { const bp = (s.bBlack || 0) / 100 * 0.08, wp = 1 - (s.bWhite || 0) / 100 * 0.4; return [bp, Math.max(wp, bp + 0.05)]; }
 function draw() { gl.drawArrays(gl.TRIANGLES, 0, 3); }
 function computeGlow(o) {
   const s = o.s, short = o.glowShort || 384, asp = o.fullW / o.fullH;
@@ -960,7 +1146,7 @@ function computeGlow(o) {
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(PK.u.u_src, 0);
   gl.uniform1f(PK.u.u_lod, Math.max(0, Math.log2(Math.min(o.texW, o.texH) / (2 * Math.min(w, h))) - 1));
   gl.uniform2f(PK.u.u_texel, 1 / o.texW, 1 / o.texH);
-  gl.uniform3f(PK.u.u_gain, ...wbGain(s));
+  gl.uniform3f(PK.u.u_gain, ...wbGain(s)); gl.uniform2f(PK.u.u_bLev, ...baseLevels(s));
   gl.uniform1f(PK.u.u_thr, 0.3 + 1.5 * s.halThreshold / 100);
   gl.uniform1f(PK.u.u_scale, FLOAT_RT ? 1 : 0.125);
   draw();
@@ -1012,12 +1198,12 @@ function dateTexture(text) {
   if (dateCache.size > 8) { for (const [k, v] of dateCache) { gl.deleteTexture(v.tex); dateCache.delete(k); break; } }
   dateCache.set(text, out); return out;
 }
-/* o: {tex, texW, texH, fullW, fullH, s, seed, outW, outH, view:[x,y,w,h], fb, bypass, glowShort, dither} */
+/* o: {tex, texW, texH, fullW, fullH, s, seed, outW, outH, view:[x,y,w,h], fb, vp:[x,y] (GL origin, bottom left), bypass, glowShort, dither} */
 function render(o) {
   const s = o.s, bypass = !!o.bypass;
   const glowTex = !bypass && (s.halation > 0 || s.bloom > 0) ? computeGlow(o) : null;
   const date = !bypass && s.dateStamp > 0 ? dateTexture(s.dateText) : null;   // may create a texture, so before binding units
-  gl.bindFramebuffer(gl.FRAMEBUFFER, o.fb || null); gl.viewport(0, 0, o.outW, o.outH);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, o.fb || null); gl.viewport(o.vp ? o.vp[0] : 0, o.vp ? o.vp[1] : 0, o.outW, o.outH);
   const u = PM.u; gl.useProgram(PM.p);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, o.tex); gl.uniform1i(u.u_src, 0);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, glowTex || DUMMY2D); gl.uniform1i(u.u_glow, 1);
@@ -1025,7 +1211,7 @@ function render(o) {
   gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_3D, lut ? lut.tex : DUMMY3D); gl.uniform1i(u.u_lut, 2);
   gl.activeTexture(gl.TEXTURE0);
   gl.uniform4f(u.u_view, ...o.view); gl.uniform3f(u.u_bg, ...BG); gl.uniform1i(u.u_bypass, bypass ? 1 : 0);
-  gl.uniform3f(u.u_gain, ...wbGain(s));
+  gl.uniform3f(u.u_gain, ...wbGain(s)); gl.uniform2f(u.u_bLev, ...baseLevels(s)); gl.uniform1f(u.u_bSat, 1 + (s.bSat || 0) / 100);
   gl.uniform1f(u.u_contrast, s.contrast / 100); gl.uniform1f(u.u_highlights, s.highlights / 100); gl.uniform1f(u.u_shadows, s.shadows / 100);
   gl.uniform1f(u.u_whites, s.whites / 100); gl.uniform1f(u.u_blacks, s.blacks / 100);
   gl.uniform1i(u.u_hasLut, lut ? 1 : 0); gl.uniform1f(u.u_lutMix, s.strength / 100); gl.uniform1f(u.u_lutSize, lut ? lut.N : 1);
@@ -1069,17 +1255,23 @@ function renderToPixels(p, tex, texW, texH, outW, outH, extra = {}) {
 const PREVIEW_EDGE = () => Math.min(2560, MAXDIM);
 const previewLRU = [];
 let decodeChain = Promise.resolve();
+const THUMB_EDGE = 480;
+const nextOrder = () => state.photos.reduce((m, p) => Math.max(m, p.order), -1) + 1;
 function newPhoto(rec) {
   return { id: rec.id || uid(), name: rec.name || 'Untitled', blob: rec.blob, settings: { ...DEFAULTS, ...(rec.settings || {}) },
     seed: rec.seed || (1 + Math.floor(Math.random() * 900)), sample: !!rec.sample, w: 0, h: 0, ready: false,
-    thumb: null, thumbTex: null, previewTex: null, pw: 0, ph: 0, fullTex: null, fw: 0, fh: 0, el: null, cv: null };
+    rating: rec.rating || 0, flag: rec.flag || 0, variantOf: rec.variantOf || null, vnum: rec.vnum || 0, order: rec.order ?? nextOrder(),
+    stats: null, coh: null,
+    thumb: null, thumbTex: null, previewTex: null, pw: 0, ph: 0, fullTex: null, fw: 0, fh: 0, el: null, cv: null, gel: null, gcv: null };
 }
+const recordOf = p => ({ id: p.id, name: p.name, blob: p.blob, settings: { ...p.settings }, seed: p.seed, sample: p.sample, rating: p.rating, flag: p.flag, variantOf: p.variantOf, vnum: p.vnum, order: p.order });
 function addPhotos(recs, { persist = true } = {}) {
   const added = [];
   for (const r of recs) { const p = newPhoto(r); state.photos.push(p); added.push(p); buildFrame(p); if (persist) persistSoon(p); }
+  state.photos.sort((a, b) => a.order - b.order);
   for (const p of added) decodeChain = decodeChain.then(() => decodePhoto(p));
   if (!state.activeId && added[0]) { state.activeId = added[0].id; state.selected = new Set([added[0].id]); state.anchorId = added[0].id; }
-  refreshLibraryUI();
+  restripe(); refreshLibraryUI();
   return added;
 }
 async function decodePhoto(p) {
@@ -1088,14 +1280,16 @@ async function decodePhoto(p) {
   try { bmp = await createImageBitmap(p.blob); }
   catch { toast(`Couldn’t open “${p.name}”. Try JPEG, PNG or WebP.`); removePhotos([p.id], true); return; }
   p.w = bmp.width; p.h = bmp.height;
-  const sc = Math.min(1, 320 / Math.max(p.w, p.h));
+  const sc = Math.min(1, THUMB_EDGE / Math.max(p.w, p.h));
   p.thumb = await createImageBitmap(bmp, { resizeWidth: Math.max(1, Math.round(p.w * sc)), resizeHeight: Math.max(1, Math.round(p.h * sc)), resizeQuality: 'high' });
   if (p.id === state.activeId && !p.previewTex) await makePreview(p, bmp);
   bmp.close?.();
   p.ready = true;
   if (p.cv) { p.cv.width = p.thumb.width; p.cv.height = p.thumb.height; p.el.querySelector('.pending')?.remove(); }
+  if (p.gcv) { p.gcv.width = p.thumb.width; p.gcv.height = p.thumb.height; }
   renderThumb(p);
-  if (p.id === state.activeId) { refreshStageInfo(); requestDraw(); schedulePalette(); }
+  if (onStage(p)) { refreshStageInfo(); requestDraw(); schedulePalette(); }
+  scheduleLookalikes();
 }
 async function makePreview(p, bmpIn) {
   const bmp = bmpIn || await createImageBitmap(p.blob);
@@ -1107,7 +1301,12 @@ async function makePreview(p, bmpIn) {
   if (pv !== bmp) pv.close?.();
   if (!bmpIn) bmp.close?.();
   const i = previewLRU.indexOf(p); if (i >= 0) previewLRU.splice(i, 1); previewLRU.push(p);
-  while (previewLRU.length > 4) { const old = previewLRU.shift(); if (old !== active() && old.previewTex) { gl.deleteTexture(old.previewTex); old.previewTex = null; } }
+  const keep = Math.max(4, state.cells.length + 2);
+  for (let k = 0; previewLRU.length > keep && k < previewLRU.length; ) {
+    const old = previewLRU[k];
+    if (onStage(old)) { k++; continue; }
+    previewLRU.splice(k, 1); if (old.previewTex) { gl.deleteTexture(old.previewTex); old.previewTex = null; }
+  }
 }
 let fullFor = null;
 async function ensureFull(p) {
@@ -1122,21 +1321,47 @@ async function ensureFull(p) {
     if (img !== bmp) img.close?.(); bmp.close?.();
   } finally { setBusy(null); requestDraw(); }
 }
+// Deleting takes photos out of the library (never off disk) and lands on the photo before the active one, as it
+// showed in the filmstrip. It's one undo step, so Ctrl/Cmd + Z, or Undo on the toast, puts them back where they were.
 function removePhotos(ids, quiet) {
+  ids = ids.filter(byId); if (!ids.length) return;
+  const gone = new Set(ids), vis = visiblePhotos();
+  let next = null;
+  if (gone.has(state.activeId)) {
+    const i = vis.findIndex(p => p.id === state.activeId);
+    for (let j = i - 1; j >= 0 && !next; j--) if (!gone.has(vis[j].id)) next = vis[j];
+    for (let j = i + 1; j < vis.length && !next; j++) if (!gone.has(vis[j].id)) next = vis[j];
+    if (!next) next = state.photos.find(p => !gone.has(p.id)) || null;
+  }
+  const recs = ids.map(id => recordOf(byId(id)));
   for (const id of ids) {
-    const p = byId(id); if (!p) continue;
+    const p = byId(id);
     [p.thumbTex, p.previewTex, p.fullTex].forEach(t => t && gl.deleteTexture(t));
-    p.thumb?.close?.(); p.el?.remove();
+    p.thumb?.close?.(); p.el?.remove(); p.gel?.remove();
     state.photos.splice(state.photos.indexOf(p), 1); state.selected.delete(id);
     const i = previewLRU.indexOf(p); if (i >= 0) previewLRU.splice(i, 1);
+    if (fullFor === p) fullFor = null;
     DB.del('photos', id);
   }
-  if (!byId(state.activeId)) {
-    const next = state.photos[0]; state.activeId = next?.id || null;
-    state.selected = new Set(next ? [next.id] : []); if (next) setActive(next.id, { keepSelection: true });
+  if (gone.has(state.refId)) setRef(null, true);
+  for (const p of state.photos) {   // an original left without its variants goes back to being a plain photo
+    if (p.vnum === 1 && !p.variantOf && !state.photos.some(q => q.variantOf === p.id)) { p.vnum = 0; persistSoon(p); p.el.querySelector('em').textContent = displayName(p); p.gel.querySelector('.nm').textContent = displayName(p); updateBadges(p); }
   }
-  refreshLibraryUI(); requestDraw(); schedulePalette();
-  if (!quiet) toast(ids.length === 1 ? 'Removed 1 photo' : `Removed ${ids.length} photos`);
+  if (gone.has(state.activeId)) {
+    state.activeId = next?.id || null;
+    state.selected = new Set(next ? [next.id] : []); state.anchorId = state.activeId;
+    if (next) setActive(next.id, { keepSelection: true });
+  }
+  restripe(); refreshLibraryUI(); requestDraw(); schedulePalette(); scheduleCohesion(); scheduleLookalikes();
+  if (quiet) return;
+  pushUndo({ label: ids.length === 1 ? 'delete' : `delete of ${ids.length} photos`, restore: () => restorePhotos(recs), again: () => removePhotos(ids, true) });
+  toast(`Deleted ${plural(ids.length, 'photo')} from the library`, 6500, { label: 'Undo', fn: undo });
+}
+function restorePhotos(recs) {
+  const back = addPhotos(recs.filter(r => !byId(r.id)));
+  if (!back.length) return;
+  for (const p of back) if (p.variantOf) { const o = byId(p.variantOf); if (o && !o.vnum) { o.vnum = 1; persistSoon(o); o.el.querySelector('em').textContent = displayName(o); o.gel.querySelector('.nm').textContent = displayName(o); updateBadges(o); } }
+  state.selected = new Set(back.map(p => p.id)); setActive(back[0].id, { keepSelection: true });
 }
 
 /* ---------------- persistence (IndexedDB, this browser only) ---------------- */
@@ -1166,7 +1391,7 @@ const dirty = new Set(); let persistTimer = 0;
 function persistSoon(p) {
   dirty.add(p.id); clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    for (const id of dirty) { const q = byId(id); if (q) DB.put('photos', { id: q.id, name: q.name, blob: q.blob, settings: q.settings, seed: q.seed, sample: q.sample, order: state.photos.indexOf(q) }); }
+    for (const id of dirty) { const q = byId(id); if (q) DB.put('photos', recordOf(q)); }
     dirty.clear();
   }, 500);
 }
@@ -1180,28 +1405,106 @@ function resizeCanvas() {
   if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
 }
 const ZOOM_MAX = 16, ZOOM_STEPS = [0.25, 0.5, 1, 2, 4, 8, 16];
-const fitScale = p => Math.min(canvas.width / p.w, canvas.height / p.h) * 0.96;
-const curScale = p => state.zoom === 'fit' ? fitScale(p) : state.zoom;   // device pixels per image pixel
-function viewRect(p, W, H) {
-  let scale = curScale(p), cx = 0.5, cy = 0.5;
+// A cell is one photo's rectangle on the stage, in device pixels from the top left. Loupe has one; compare two; survey up to 12.
+const fullCell = () => ({ x: 0, y: 0, w: canvas.width, h: canvas.height, p: active() });
+const cellOf = p => state.cells.find(c => c.p === p && !c.bypass) || state.cells.find(c => c.p === p) || fullCell();
+const onStage = p => p === active() || state.cells.some(c => c.p === p);
+const fitScale = (p, c = cellOf(p)) => Math.min(c.w / p.w, c.h / p.h) * (state.cells.length > 1 ? 0.985 : 0.96);
+const curScale = (p, c) => state.zoom === 'fit' ? fitScale(p, c) : state.zoom;   // device pixels per image pixel
+function viewRect(p, W, H, c) {
+  let scale = curScale(p, c), cx = 0.5, cy = 0.5;
   const vw = W / (p.w * scale), vh = H / (p.h * scale);
   if (state.zoom !== 'fit') {
     cx = vw >= 1 ? 0.5 : clamp(state.pan.x, vw / 2, 1 - vw / 2); cy = vh >= 1 ? 0.5 : clamp(state.pan.y, vh / 2, 1 - vh / 2);
-    state.pan.x = cx; state.pan.y = cy;
+    if (!c || c.p === active()) { state.pan.x = cx; state.pan.y = cy; }
   }
   return [cx - vw / 2, cy - vh / 2, vw, vh];
 }
+// Compare shows two selected photos side by side (or one photo before and after); survey shows every selected photo.
+function comparePair() {
+  const p = active(), sel = selectedPhotos().filter(q => q !== p);
+  if (!p) return [];
+  const [a, b] = state.pair.map(byId);
+  if (a && b && state.selected.has(a.id) && state.selected.has(b.id) && (a === p || b === p)) return [a, b];
+  if (!sel.length) return [p];
+  const other = sel.find(q => (q.variantOf || q.id) === (p.variantOf || p.id)) || sel[0];
+  state.pair = [p.id, other.id]; return [p, other];
+}
+function stageItems() {
+  const p = active(); if (!p) return [];
+  if (state.view === 'compare') {
+    const pair = comparePair();
+    return pair.length === 2 ? pair.map(q => ({ p: q })) : [{ p, bypass: true, label: 'Before' }, { p, label: 'After' }];
+  }
+  if (state.view === 'survey') {
+    const sel = selectedPhotos().slice(0, 12);
+    return sel.length > 1 ? sel.map(q => ({ p: q })) : [{ p }];
+  }
+  return [{ p }];
+}
+function layoutCells(items, W, H) {
+  const n = items.length;
+  if (n <= 1) return items.map(it => ({ ...it, x: 0, y: 0, w: W, h: H }));
+  const gap = Math.round(10 * (canvas.width / Math.max(1, canvas.getBoundingClientRect().width)));
+  const asp = items.reduce((s, it) => s + (it.p.w && it.p.h ? it.p.w / it.p.h : 1.5), 0) / n;
+  let best = null;
+  for (let cols = 1; cols <= n; cols++) {
+    const rows = Math.ceil(n / cols), cw = (W - gap * (cols - 1)) / cols, ch = (H - gap * (rows - 1)) / rows;
+    const ih = Math.min(cw / asp, ch), score = ih * ih * asp;
+    if (!best || score > best.score) best = { cols, cw, ch, score };
+  }
+  return items.map((it, i) => ({ ...it, x: Math.round((i % best.cols) * (best.cw + gap)), y: Math.round(Math.floor(i / best.cols) * (best.ch + gap)), w: Math.round(best.cw), h: Math.round(best.ch) }));
+}
 function drawStage() {
   resizeCanvas();
-  const p = active(), W = canvas.width, H = canvas.height;
+  const W = canvas.width, H = canvas.height;
   $('#empty').hidden = state.photos.length > 0;
-  if (!p || !p.ready) { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); gl.clearColor(...BG, 1); gl.clear(gl.COLOR_BUFFER_BIT); return; }
-  let tex = p.thumbTex, tw = p.thumb.width, th = p.thumb.height;
-  if (!tex) { tex = p.thumbTex = texFromImage(p.thumb); }
-  if (state.zoom !== 'fit' && p.fullTex) { tex = p.fullTex; tw = p.fw; th = p.fh; }
-  else if (p.previewTex) { tex = p.previewTex; tw = p.pw; th = p.ph; }
-  render({ tex, texW: tw, texH: th, fullW: p.w, fullH: p.h, s: p.settings, seed: p.seed, outW: W, outH: H, view: viewRect(p, W, H), bypass: state.before, glowShort: 384 });
+  const wasSide = sideBySide();
+  state.cells = state.view === 'grid' ? [] : layoutCells(stageItems(), W, H);
+  if (sideBySide() !== wasSide) { refreshScopeUI(); refreshStageInfo(); }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); gl.clearColor(...BG, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  for (const c of state.cells) {
+    const p = c.p; if (!p.ready) continue;
+    let tex = p.thumbTex, tw = p.thumb.width, th = p.thumb.height;
+    if (!tex) { tex = p.thumbTex = texFromImage(p.thumb); }
+    if (state.zoom !== 'fit' && p.fullTex) { tex = p.fullTex; tw = p.fw; th = p.fh; }
+    else if (p.previewTex) { tex = p.previewTex; tw = p.pw; th = p.ph; }
+    else if (Math.max(c.w, c.h) > THUMB_EDGE * 1.2 && !p.previewPending) { p.previewPending = true; makePreview(p).finally(() => { p.previewPending = false; requestDraw(); }); }
+    render({ tex, texW: tw, texH: th, fullW: p.w, fullH: p.h, s: p.settings, seed: p.seed, outW: c.w, outH: c.h, vp: [c.x, H - c.y - c.h], view: viewRect(p, c.w, c.h, c), bypass: state.before || c.bypass, glowShort: state.cells.length > 2 ? 192 : 384 });
+  }
+  drawCellLabels();
 }
+// Labels and pick/reject buttons over each photo in compare and survey. Rebuilt only when something on them changes.
+let cellsKey = '';
+function drawCellLabels(force) {
+  const box = $('#cells'), multi = state.cells.length > 1;
+  $('#stageInfo').hidden = multi;
+  const dpr = canvas.width / Math.max(1, canvas.getBoundingClientRect().width);
+  const key = multi ? state.cells.map(c => [c.p.id, c.x, c.y, c.w, c.h, c.bypass, c.p.rating, c.p.flag, c.p.coh?.score | 0, c.p === active(), state.before, state.refId === c.p.id].join()).join('|') + state.showCoh : '';
+  if (!force && key === cellsKey) return;
+  cellsKey = key; box.innerHTML = '';
+  if (!multi) return;
+  for (const c of state.cells) {
+    const p = c.p, el = document.createElement('div');
+    el.className = 'cellbox' + (!c.label && p === active() ? ' on' : '');
+    Object.assign(el.style, { left: c.x / dpr + 'px', top: c.y / dpr + 'px', width: c.w / dpr + 'px', height: c.h / dpr + 'px' });
+    const tags = c.label ? `<span class="tag${c.bypass ? ' before' : ''}">${c.label}</span>` :
+      `<span class="tag">${esc(displayName(p))}</span>` + (p.id === state.refId ? '<span class="tag before">Reference</span>' : '') +
+      (p.rating ? `<span class="tag" style="color:var(--edge)">${'★'.repeat(p.rating)}</span>` : '') + (state.showCoh && p.coh ? `<span class="tag">Cohesion ${Math.round(p.coh.score)}</span>` : '') +
+      (state.before ? '<span class="tag before">Before</span>' : '');
+    const acts = c.label ? '' : `<button class="btn small${p.flag === 1 ? ' picked' : ''}" type="button" data-cflag="1" data-id="${p.id}" title="Pick (P)">${p.flag === 1 ? '✓ Picked' : 'Pick'}</button><button class="btn small${p.flag === -1 ? ' rejected' : ''}" type="button" data-cflag="-1" data-id="${p.id}" title="Reject (X)">${p.flag === -1 ? '✕ Rejected' : 'Reject'}</button>` +
+      (state.view === 'survey' ? `<button class="btn small" type="button" data-cdrop="${p.id}" title="Take out of the survey (stays in the library)">Hide</button>` : '');
+    el.innerHTML = `<div class="tags">${tags}</div><div class="acts">${acts}</div>`;
+    box.appendChild(el);
+  }
+}
+$('#cells').addEventListener('click', e => {
+  const f = e.target.closest('[data-cflag]');
+  if (f) { const p = byId(f.dataset.id), v = +f.dataset.cflag; setFlag([p], p.flag === v ? 0 : v, { noAdvance: true }); return; }
+  const d = e.target.closest('[data-cdrop]');
+  if (d) { state.selected.delete(d.dataset.cdrop); if (state.activeId === d.dataset.cdrop) { const nx = selectedPhotos()[0]; if (nx) setActive(nx.id, { keepSelection: true }); } refreshLibraryUI(); requestDraw(); }
+});
+$('#cells').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.stopPropagation(); });
 
 /* ---------------- thumbnails ---------------- */
 const thumbQueue = new Set(); let thumbTimer = 0;
@@ -1217,66 +1520,371 @@ function renderThumb(p) {
   const w = p.thumb.width, h = p.thumb.height;
   const px = renderToPixels(p, p.thumbTex, w, h, w, h);
   p.cv.getContext('2d').putImageData(new ImageData(px, w, h), 0, 0);
+  if (p.gcv) p.gcv.getContext('2d').drawImage(p.cv, 0, 0);
   p.el.querySelector('.dot').hidden = !isEdited(p.settings);
+  if (p.gel) p.gel.querySelector('.dot').hidden = !isEdited(p.settings);
+  queueStats([p]);
+}
+
+/* ---------------- cohesion: how alike the graded photos look ----------------
+   Each photo is measured small with its look applied (texture effects off): average lightness, contrast (spread of
+   lightness), the colour cast of its near-neutral tones, average colourfulness, and a five-colour palette. Each is
+   scored against the reference photo, or against the library average when there's no reference. */
+const S2L = new Float32Array(256).map((_, i) => s2l(i / 255));
+const NO_TEXTURE = { grain: 0, dust: 0, hairs: 0, scratches: 0, leak: 0, stains: 0, dateStamp: 0, frameEdge: 0, soften: 0, aberration: 0 };
+function renderSmall(p, s, edge = 80) {
+  if (!p.thumb) return null;
+  if (!p.thumbTex) p.thumbTex = texFromImage(p.thumb);
+  const sc = edge / Math.max(p.w, p.h), w = Math.max(1, Math.round(p.w * sc)), h = Math.max(1, Math.round(p.h * sc));
+  const rt = makeRT(w, h);
+  render({ tex: p.thumbTex, texW: p.thumb.width, texH: p.thumb.height, fullW: p.w, fullH: p.h, s: { ...s, ...NO_TEXTURE }, seed: p.seed, outW: w, outH: h, view: [0, 0, 1, 1], fb: rt.fb, glowShort: 64, dither: 0 });
+  const px = readRT(rt); freeRT(rt); return px;
+}
+function labFast(r, g, b) {
+  const R = S2L[r], G = S2L[g], B = S2L[b];
+  const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  const fx = f((R * 0.4124564 + G * 0.3575761 + B * 0.1804375) / 0.95047), fy = f(R * 0.2126729 + G * 0.7151522 + B * 0.0721750), fz = f((R * 0.0193339 + G * 0.1191920 + B * 0.9503041) / 1.08883);
+  return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+}
+function imageStats(px, withPalette = true) {
+  let n = 0, sL = 0, sL2 = 0, sC = 0, sa = 0, sb = 0, sw = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    const [L, a, b] = labFast(px[i], px[i + 1], px[i + 2]), C = Math.hypot(a, b), w = 0.04 + Math.exp(-C * C / 450);
+    n++; sL += L; sL2 += L * L; sC += C; sa += a * w; sb += b * w; sw += w;
+  }
+  const L = sL / n;
+  return { L, sd: Math.sqrt(Math.max(0, sL2 / n - L * L)), a: sa / sw, b: sb / sw, C: sC / n, pal: withPalette ? kmeans(px, 5) : null };
+}
+function measure(p, s = p.settings, withPalette = true) { const px = renderSmall(p, s); return px ? imageStats(px, withPalette) : null; }
+function palDist(A, B) {
+  const one = (X, Y) => X.reduce((s, x) => s + x.share * Math.min(...Y.map(y => Math.hypot(x.lab[0] - y.lab[0], x.lab[1] - y.lab[1], x.lab[2] - y.lab[2]))), 0);
+  return (one(A, B) + one(B, A)) / 2;
+}
+function cohScore(st, ref) {
+  const dL = st.L - ref.L, dK = st.sd - ref.sd, da = st.a - ref.a, db = st.b - ref.b, dC = st.C - ref.C;
+  const dPal = st.pal && ref.pal ? palDist(st.pal, ref.pal) : 0;
+  const penalty = 1.4 * Math.abs(dL) + 1.2 * Math.abs(dK) + 2.5 * Math.hypot(da, db) + 0.8 * Math.abs(dC) + 0.45 * dPal;
+  return { score: clamp(100 - penalty, 0, 100), dL, dK, da, db, dC, dPal };
+}
+const cohClass = s => s >= 85 ? 'ok' : s >= 70 ? 'warn' : 'far';
+const cohWord = s => s >= 85 ? 'Cohesive' : s >= 70 ? 'Close' : 'Outlier';
+function cohesionBase() {
+  const ref = byId(state.refId);
+  if (ref?.stats) return { stats: ref.stats, ref };
+  const st = visiblePhotos().map(p => p.stats).filter(Boolean);
+  if (st.length < 2) return null;
+  const avg = k => st.reduce((s, x) => s + x[k], 0) / st.length;
+  const pal = st.flatMap(x => (x.pal || []).map(c => ({ ...c, share: c.share / st.length })));
+  return { stats: { L: avg('L'), sd: avg('sd'), a: avg('a'), b: avg('b'), C: avg('C'), pal }, ref: null };
+}
+const statsQueue = new Set(); let statsTimer = 0, cohTimer = 0;
+function queueStats(ps) { ps.forEach(p => statsQueue.add(p.id)); clearTimeout(statsTimer); statsTimer = setTimeout(runStats, 400); }
+function runStats() {
+  let n = 0;
+  for (const id of statsQueue) { statsQueue.delete(id); const p = byId(id); if (p?.thumb) p.stats = measure(p); if (++n >= 8) break; }
+  if (statsQueue.size) statsTimer = setTimeout(runStats, 30); else refreshCohesion();
+}
+function scheduleCohesion() { clearTimeout(cohTimer); cohTimer = setTimeout(refreshCohesion, 120); }
+function refreshCohesion() {
+  const base = cohesionBase();
+  for (const p of state.photos) p.coh = base && p.stats && p !== base.ref ? cohScore(p.stats, base.stats) : null;
+  state.photos.forEach(updateBadges);
+  const scored = visiblePhotos().filter(p => p.coh), sum = $('#cohSum');
+  sum.hidden = scored.length < (base?.ref ? 1 : 2);
+  if (!sum.hidden) {
+    const avg = Math.round(scored.reduce((s, p) => s + p.coh.score, 0) / scored.length), out = scored.filter(p => p.coh.score < 70).length;
+    sum.innerHTML = `${base.ref ? 'Against reference' : 'Library'} cohesion <b class="${cohClass(avg)}" style="color:var(--${cohClass(avg) === 'far' ? 'safelight' : cohClass(avg)})">${avg}</b>` + (out ? ` · ${plural(out, 'outlier')}` : '');
+  }
+  if (state.sort === 'coh') restripe();
+  renderRefInfo(); refreshStageInfo(); drawCellLabels();
+}
+
+/* ---------------- look-alikes: photos that look like the same shot ----------------
+   Each original is boiled down to a 16 × 16 lightness map and its edges, plus the same from eight 80–90% crops. Two
+   photos look alike when one matches the other, or a crop of it, closely enough (0.6 of a perfect match). Matches
+   chain into sets: re-generations of the same scene, near-identical frames, and crops or exports of the same file.
+   Variants of one file are left out, since they already sit together. Tested on the Midjourney site imagery: true
+   pairs score 0.64–1.0, different scenes with the same string-lights layout top out at 0.55. */
+const LA_N = 16, LA_MATCH = 0.6, LA_PRECHECK = 0.35;
+const laCanvas = document.createElement('canvas'); laCanvas.width = laCanvas.height = LA_N;
+function laView(img, sc, fx, fy) {
+  const x = laCanvas.getContext('2d', { willReadFrequently: true }), W = img.width, H = img.height, w = W * sc, h = H * sc, N = LA_N;
+  x.clearRect(0, 0, N, N); x.drawImage(img, (W - w) * fx, (H - h) * fy, w, h, 0, 0, N, N);
+  const d = x.getImageData(0, 0, N, N).data, L = new Float32Array(N * N), G = new Float32Array(N * N * 2);
+  for (let i = 0, k = 0; i < d.length; i += 4, k++) L[k] = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  for (let y = 0; y < N; y++) for (let x2 = 0; x2 < N; x2++) {
+    G[y * N + x2] = L[y * N + Math.min(x2 + 1, N - 1)] - L[y * N + Math.max(x2 - 1, 0)];
+    G[N * N + y * N + x2] = L[Math.min(y + 1, N - 1) * N + x2] - L[Math.max(y - 1, 0) * N + x2];
+  }
+  const z = v => { let m = 0; for (const a of v) m += a; m /= v.length; let q = 0; for (const a of v) q += (a - m) ** 2; const sd = Math.sqrt(q / v.length) || 1; return v.map(a => (a - m) / sd); };
+  return { L: z(L), G: z(G) };
+}
+function fingerprint(p) {
+  if (p.fp) return p.fp;
+  if (!p.thumb) return null;
+  const v = [laView(p.thumb, 1, 0.5, 0.5)];
+  for (const sc of [0.9, 0.8]) for (const fx of [0, 0.5, 1]) for (const fy of [0, 0.5, 1]) v.push(laView(p.thumb, sc, fx, fy));
+  return p.fp = v;
+}
+function laMatch(A, B) {
+  const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s / a.length; };
+  const s = (a, b) => 0.5 * dot(a.L, b.L) + 0.5 * dot(a.G, b.G);
+  if (s(A[0], B[0]) < LA_PRECHECK) return false;   // nowhere close: skip the crop search
+  for (const a of A) if (s(a, B[0]) >= LA_MATCH) return true;
+  for (const b of B) if (s(A[0], b) >= LA_MATCH) return true;
+  return false;
+}
+let laTimer = 0, laRun = 0;
+function scheduleLookalikes() { clearTimeout(laTimer); laTimer = setTimeout(computeLookalikes, 700); }
+async function computeLookalikes() {
+  const run = ++laRun, ps = state.photos.filter(p => p.ready), parent = new Map(ps.map(p => [p, p]));
+  const root = p => { while (parent.get(p) !== p) { parent.set(p, parent.get(parent.get(p))); p = parent.get(p); } return p; };
+  let t = performance.now();
+  for (let i = 0; i < ps.length; i++) {
+    const a = fingerprint(ps[i]); if (!a) continue;
+    for (let j = i + 1; j < ps.length; j++) {
+      if ((ps[i].variantOf || ps[i].id) === (ps[j].variantOf || ps[j].id) || root(ps[i]) === root(ps[j])) continue;
+      const b = fingerprint(ps[j]); if (b && laMatch(a, b)) parent.set(root(ps[i]), root(ps[j]));
+    }
+    if (performance.now() - t > 30) { await new Promise(r => setTimeout(r, 0)); t = performance.now(); if (run !== laRun) return; }
+  }
+  const sets = new Map();
+  for (const p of ps) { const r = root(p); if (!sets.has(r)) sets.set(r, []); sets.get(r).push(p); }
+  const before = state.photos.map(p => p.sim || 0).join();
+  state.photos.forEach(p => { p.sim = 0; p.simN = 0; });
+  let n = 0;
+  for (const g of [...sets.values()].filter(g => new Set(g.map(p => p.variantOf || p.id)).size > 1).sort((a, b) => a[0].order - b[0].order)) { n++; g.forEach(p => { p.sim = n; p.simN = g.length; }); }
+  if (state.photos.map(p => p.sim || 0).join() === before) return;
+  state.photos.forEach(updateBadges);
+  if (state.sort === 'alike' || state.filter.edit === 'alike') restripe();
+  refreshStageInfo();
 }
 
 /* ---------------- library UI ---------------- */
+const displayName = p => (p.sample ? 'sample' : p.name) + (p.vnum ? ` · v${p.vnum}` : '');
 function buildFrame(p) {
   const el = document.createElement('button'); el.type = 'button'; el.className = 'frame'; el.dataset.id = p.id;
-  el.innerHTML = `<canvas width="120" height="80"></canvas><span class="pending">developing…</span><span class="dot" hidden></span><span class="edge"><span class="num"></span><em></em></span>`;
-  el.title = p.name; el.querySelector('em').textContent = p.sample ? 'sample' : p.name;
+  el.innerHTML = `<canvas width="120" height="80"></canvas><span class="pending">developing…</span><span class="dot" hidden></span><span class="badges"></span><span class="lo"><span class="bst"></span><span class="bcoh"></span></span><span class="edge"><span class="num"></span><em></em></span>`;
+  el.title = p.name; el.querySelector('em').textContent = displayName(p);
   p.el = el; p.cv = el.querySelector('canvas');
   $('#filmTrack').appendChild(el);
+  const g = document.createElement('div'); g.className = 'cell'; g.dataset.id = p.id;
+  g.innerHTML = `<div class="ph"><canvas width="120" height="80"></canvas><span class="dot" hidden></span><span class="badges"></span><span class="bcoh"></span></div><div class="meta"><span class="nm"></span><span class="rate">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-rate="${n}" aria-label="${n} star${n > 1 ? 's' : ''}">★</button>`).join('')}</span></div>`;
+  g.title = p.name; g.querySelector('.nm').textContent = displayName(p);
+  p.gel = g; p.gcv = g.querySelector('canvas');
+  $('#gridTrack').appendChild(g);
+  updateBadges(p);
+}
+function updateBadges(p) {
+  if (!p.el) return;
+  const flag = p.flag === 1 ? '<span class="bdg pick" title="Pick">✓</span>' : p.flag === -1 ? '<span class="bdg rej" title="Rejected">✕</span>' : '';
+  const b = (p.id === state.refId ? '<span class="bdg ref" title="Reference photo">Ref</span>' : '') + flag + (p.vnum ? `<span class="bdg" title="Variant ${p.vnum}">v${p.vnum}</span>` : '');
+  const s = p.coh && state.showCoh ? Math.round(p.coh.score) : null;
+  const coh = s == null ? '' : `<span class="bdg ${cohClass(s)}" title="Cohesion ${s} of 100: ${cohWord(s).toLowerCase()}">${s}</span>`;
+  p.el.querySelector('.badges').innerHTML = b; p.el.querySelector('.bcoh').innerHTML = coh;
+  p.el.querySelector('.bst').innerHTML = p.rating ? `<span class="bdg stars">${'★'.repeat(p.rating)}</span>` : '';
+  p.el.classList.toggle('rej', p.flag === -1);
+  p.gel.querySelector('.badges').innerHTML = b; p.gel.querySelector('.bcoh').innerHTML = coh;
+  p.gel.querySelectorAll('[data-rate]').forEach(x => x.classList.toggle('on', +x.dataset.rate <= p.rating));
+  p.gel.classList.toggle('rej', p.flag === -1);
+  const sim = p.sim ? `<span class="bdg alike" title="Look-alike set ${p.sim}: ${p.simN} photos that look like the same shot">≈${p.sim}</span>` : '';
+  p.el.querySelector('.badges').insertAdjacentHTML('beforeend', sim); p.gel.querySelector('.badges').insertAdjacentHTML('beforeend', sim);
+}
+// Put the filmstrip and grid in the order showing, and hide what the filters leave out.
+function restripe() {
+  const vis = visiblePhotos(), shown = new Set(vis), strip = $('#filmTrack'), grid = $('#gridTrack');
+  for (const p of vis) { if (p.el) { p.el.hidden = false; strip.appendChild(p.el); } if (p.gel) { p.gel.hidden = false; grid.appendChild(p.gel); } }
+  for (const p of state.photos) if (!shown.has(p)) { if (p.el) p.el.hidden = true; if (p.gel) p.gel.hidden = true; }
+  const total = state.photos.length, ge = $('#gridEmpty');
+  $('#libCount').textContent = !total ? '' : filterActive() ? `${vis.length} of ${total} showing` : plural(total, 'photo');
+  $('#fClear').hidden = !filterActive();
+  ge.hidden = vis.length > 0;
+  ge.innerHTML = total ? '<b>No photos match these filters.</b><button class="btn small" type="button" data-clearf>Clear filters</button>' : '<b>Your library is empty</b><span>Drop photos here or use Import photos.</span>';
 }
 function refreshLibraryUI() {
   state.photos.forEach((p, i) => {
     if (!p.el) return;
     p.el.querySelector('.num').textContent = `${i + 1} ▸ ${i + 1}A`;
-    p.el.classList.toggle('sel', state.selected.has(p.id)); p.el.classList.toggle('active', p.id === state.activeId);
+    for (const el of [p.el, p.gel]) { el.classList.toggle('sel', state.selected.has(p.id)); el.classList.toggle('active', p.id === state.activeId); }
     p.el.setAttribute('aria-pressed', state.selected.has(p.id));
   });
   const n = state.selected.size, total = state.photos.length;
-  $('#selInfo').textContent = !total ? 'No photos yet.' : `${total} photo${total === 1 ? '' : 's'} in the library, ${n} selected. Editing ${scopeText()}.`;
+  $('#selInfo').textContent = !total ? 'No photos yet.' : `${plural(total, 'photo')} in the library, ${n} selected. Editing ${scopeText()}.`;
   refreshScopeUI();
   $('#btnSync').disabled = n < 2; $('#btnPaste').disabled = !state.clip || !n; $('#btnRemove').disabled = !n;
+  $('#btnVariant').disabled = !n; $('#btnRef').disabled = !active();
+  $('#btnRef').textContent = state.refId && state.refId === state.activeId ? 'Clear reference' : 'Set reference';
+  document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === state.view));
 }
 function setActive(id, { keepSelection = false } = {}) {
   const p = byId(id); if (!p) return;
   state.activeId = id; if (!keepSelection) { state.selected = new Set([id]); state.anchorId = id; }
   state.selected.add(id);
   if (state.zoom !== 'fit') { state.zoom = 'fit'; syncZoomBtn(); }
-  refreshLibraryUI(); syncControls(); refreshStageInfo(); requestDraw(); schedulePalette();
-  p.el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  if (p.ready && !p.previewTex) makePreview(p).then(() => { requestDraw(); schedulePalette(); });
+  refreshLibraryUI(); syncControls(); refreshStageInfo(); renderRefInfo(); requestDraw(); schedulePalette();
+  if (!p.el?.hidden) p.el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (state.view === 'grid' && !p.gel?.hidden) p.gel?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  if (p.ready && !p.previewTex && state.view !== 'grid') makePreview(p).then(() => { requestDraw(); schedulePalette(); });
 }
-$('#filmTrack').addEventListener('click', e => {
-  const el = e.target.closest('.frame'); if (!el) return;
-  const id = el.dataset.id;
+function frameClick(e, id) {
+  const vis = visiblePhotos();
   if (e.shiftKey && state.anchorId) {
-    const a = state.photos.findIndex(p => p.id === state.anchorId), b = state.photos.findIndex(p => p.id === id);
+    const a = vis.findIndex(p => p.id === state.anchorId), b = vis.findIndex(p => p.id === id);
+    if (a < 0) { setActive(id); return; }
     const [lo, hi] = a < b ? [a, b] : [b, a];
-    state.selected = new Set(state.photos.slice(lo, hi + 1).map(p => p.id)); setActive(id, { keepSelection: true });
+    state.selected = new Set(vis.slice(lo, hi + 1).map(p => p.id)); setActive(id, { keepSelection: true });
   } else if (e.metaKey || e.ctrlKey) {
     if (state.selected.has(id) && state.selected.size > 1) {
       state.selected.delete(id);
-      if (id === state.activeId) setActive([...state.selected][0], { keepSelection: true }); else refreshLibraryUI();
+      if (id === state.activeId) setActive([...state.selected][0], { keepSelection: true }); else { refreshLibraryUI(); requestDraw(); }
     } else { state.selected.add(id); state.anchorId = id; setActive(id, { keepSelection: true }); }
-  } else setActive(id);
+  } else if ((state.view === 'compare' || state.view === 'survey') && state.selected.has(id)) setActive(id, { keepSelection: true });
+  else if (state.view === 'compare' && sideBySide()) setCandidate(byId(id));
+  else setActive(id);
+}
+// Compare keeps the left photo and swaps the right one (the candidate), so you can hold your best and browse against it.
+function setCandidate(c) {
+  const [a] = comparePair(); if (!c || !a || c === a) return;
+  state.selected = new Set([a.id, c.id]); state.pair = [a.id, c.id]; setActive(c.id, { keepSelection: true });
+}
+$('#filmTrack').addEventListener('click', e => { const el = e.target.closest('.frame'); if (el) frameClick(e, el.dataset.id); });
+$('#gridTrack').addEventListener('click', e => {
+  const el = e.target.closest('.cell'); if (!el) return;
+  const r = e.target.closest('[data-rate]');
+  if (r) { const p = byId(el.dataset.id), n = +r.dataset.rate; setRating([p], p.rating === n ? 0 : n, { noAdvance: true }); return; }
+  frameClick(e, el.dataset.id);
 });
+$('#gridTrack').addEventListener('dblclick', e => { const el = e.target.closest('.cell'); if (el && !e.target.closest('[data-rate]')) { setActive(el.dataset.id); setView('loupe'); } });
+$('#grid').addEventListener('click', e => { if (e.target.closest('[data-clearf]')) clearFilters(); });
 function refreshStageInfo() {
   const p = active(), box = $('#stageInfo');
   if (!p) { box.innerHTML = ''; return; }
   const stock = lutName(p.settings.stock) || 'No film';
-  box.innerHTML = `<span class="tag">${esc(p.name)}</span>` + (p.w ? `<span class="tag">${p.w}×${p.h}</span>` : '') +
-    `<span class="tag">${esc(stock)}</span>` + (targets().length > 1 ? `<span class="tag many">Editing ${targets().length} photos</span>` : '') + (state.zoom !== 'fit' ? `<span class="tag">${zoomPct()}</span>` : '') + (state.before ? '<span class="tag before">Before</span>' : '');
+  box.innerHTML = `<span class="tag">${esc(displayName(p))}</span>` + (p.w ? `<span class="tag">${p.w}×${p.h}</span>` : '') +
+    `<span class="tag">${esc(stock)}</span>` + (p.id === state.refId ? '<span class="tag before">Reference</span>' : '') +
+    (p.rating ? `<span class="tag" style="color:var(--edge)">${'★'.repeat(p.rating)}</span>` : '') + (p.flag ? `<span class="tag">${p.flag > 0 ? '✓ Pick' : '✕ Rejected'}</span>` : '') + (p.sim ? `<span class="tag">Look-alike set ${p.sim} of ${p.simN}</span>` : '') +
+    (state.showCoh && p.coh ? `<span class="tag">Cohesion ${Math.round(p.coh.score)}</span>` : '') +
+    (targets().length > 1 ? `<span class="tag many">Editing ${targets().length} photos</span>` : '') + (state.zoom !== 'fit' ? `<span class="tag">${zoomPct()}</span>` : '') + (state.before ? '<span class="tag before">Before</span>' : '');
 }
+
+/* ---------------- views, ratings, flags, reference, variants ---------------- */
+function setView(v) {
+  if (v === state.view) return;
+  if ((v === 'compare' || v === 'survey') && state.view === 'loupe' && state.zoom !== 'fit') state.zoom = 'fit';
+  state.view = v; prefs.set('view', v);
+  $('#app').classList.toggle('v-grid', v === 'grid');
+  if (v === 'survey' && selectedPhotos().length < 2) toast('Select two or more photos to survey them side by side');
+  setPicking(false, true); syncZoomBtn(); refreshLibraryUI(); refreshStageInfo(); requestDraw(); schedulePalette();
+  if (v === 'grid') active()?.gel?.scrollIntoView({ block: 'nearest' });
+  else if (active()?.ready && !active().previewTex) makePreview(active()).then(requestDraw);
+}
+document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+// Rating and flagging act on the selection in the grid, and on the photo in view (the outlined one side by side) elsewhere.
+const cullTargets = () => state.view === 'grid' ? selectedPhotos() : [active()].filter(Boolean);
+function afterCull(ps, opts) {
+  ps.forEach(p => { updateBadges(p); persistSoon(p); });
+  refreshStageInfo(); drawCellLabels();
+  const p = active(), hidden = p && !passes(p);
+  if (hidden || (state.sort === 'rating')) restripe();
+  if (hidden) { const vis = visiblePhotos(); const nx = nextAfter(p, vis); if (nx) setActive(nx.id); else requestDraw(); return; }
+  if (state.autoAdvance && !opts?.noAdvance && ps.length === 1 && ps[0] === p && state.view !== 'survey') step(1);
+}
+function nextAfter(p, vis) {   // the photo after p in the order showing (p itself may have just been filtered out)
+  const all = state.sort === 'order' ? state.photos : vis, i = all.indexOf(p), shown = new Set(vis);
+  for (let j = i + 1; j < all.length; j++) if (shown.has(all[j])) return all[j];
+  for (let j = i - 1; j >= 0; j--) if (shown.has(all[j])) return all[j];
+  return vis[0] || null;
+}
+function setRating(ps, n, opts) { ps = ps.filter(Boolean); if (!ps.length) return; ps.forEach(p => p.rating = n); afterCull(ps, opts); }
+function setFlag(ps, f, opts) { ps = ps.filter(Boolean); if (!ps.length) return; ps.forEach(p => p.flag = f); afterCull(ps, opts); }
+function step(dir) {
+  const vis = visiblePhotos();
+  if (state.view === 'compare' && sideBySide()) {
+    const [a, b] = comparePair(); let j = vis.indexOf(b) + Math.sign(dir);
+    if (vis[j] === a) j += Math.sign(dir);
+    if (vis[j]) setCandidate(vis[j]);
+    return;
+  }
+  if (state.view === 'survey' && sideBySide()) {
+    const sel = selectedPhotos(), i = sel.indexOf(active()), nx = sel[(i + Math.sign(dir) + sel.length) % sel.length];
+    if (nx) setActive(nx.id, { keepSelection: true });
+    return;
+  }
+  const i = vis.findIndex(p => p.id === state.activeId), j = clamp(i + dir, 0, vis.length - 1);
+  if (vis[j] && j !== i) setActive(vis[j].id);
+}
+function setRef(id, quiet) {
+  const was = state.refId; state.refId = id || null; prefs.set('refId', state.refId);
+  [byId(was), byId(id)].forEach(p => p && updateBadges(p));
+  if (id) { const p = byId(id); if (p && !p.stats && p.thumb) p.stats = measure(p); }
+  refreshLibraryUI(); refreshCohesion();
+  if (!quiet) toast(id ? 'Reference set. Every photo is now scored against it; use Match reference in Pregrade to pull others in line.' : 'Reference cleared. Scores are now against the library average.', 5000);
+}
+$('#btnRef').onclick = () => { const p = active(); if (p) setRef(state.refId === p.id ? null : p.id); };
+// A variant is a second copy of the same file with its own edits. It sits next to the original and exports as its own file.
+function makeVariants(ps) {
+  ps = ps.filter(Boolean); if (!ps.length) return;
+  const made = [];
+  for (const p of ps) {
+    const group = p.variantOf || p.id, sibs = state.photos.filter(q => (q.variantOf || q.id) === group);
+    const vnum = Math.max(1, ...sibs.map(q => q.vnum || 1)) + 1, last = sibs.reduce((a, b) => (a.order > b.order ? a : b));
+    const after = state.photos.find(q => q.order > last.order);
+    if (!p.vnum) { p.vnum = 1; p.variantOf = null; persistSoon(p); updateBadges(p); p.el.querySelector('em').textContent = displayName(p); p.gel.querySelector('.nm').textContent = displayName(p); }
+    const [q] = addPhotos([{ blob: p.blob, name: p.name, settings: { ...p.settings }, seed: p.seed, sample: p.sample, variantOf: group, vnum, order: after ? (last.order + after.order) / 2 : last.order + 1 }]);
+    made.push([p, q]);
+  }
+  const recs = made.map(m => recordOf(m[1]));
+  pushUndo({ label: ps.length === 1 ? 'variant' : `${ps.length} variants`, restore: () => removePhotos(recs.map(r => r.id), true), again: () => restorePhotos(recs) });
+  if (made.length === 1) {
+    const [p, q] = made[0];
+    state.selected = new Set([p.id, q.id]); state.pair = [p.id, q.id]; setActive(q.id, { keepSelection: true });
+    if (state.view !== 'grid') setView('compare');
+    toast(`Variant ${q.vnum} made and shown beside the original. Edits now go to the side outlined in orange.`, 6000);
+  } else { state.selected = new Set(made.map(m => m[1].id)); setActive(made[0][1].id, { keepSelection: true }); toast(`Made ${plural(made.length, 'variant')}`); }
+}
+$('#btnVariant').onclick = () => makeVariants(selectedPhotos().length ? selectedPhotos() : [active()]);
+
+/* filter bar */
+function syncFilterUI() {
+  $('#fFlag').value = state.filter.flag; $('#fStars').value = String(state.filter.stars); $('#fEdit').value = state.filter.edit; $('#sortBy').value = state.sort;
+  $('#fFlag').classList.toggle('on', state.filter.flag !== 'any'); $('#fStars').classList.toggle('on', +state.filter.stars !== 0); $('#fEdit').classList.toggle('on', state.filter.edit !== 'any');
+  $('#cohShow').checked = state.showCoh; $('#autoAdv').checked = state.autoAdvance;
+  $('#thumbSize').value = state.thumbSize; $('#grid').style.setProperty('--cell', state.thumbSize + 'px');
+}
+function applyFilters() {
+  prefs.set('filter', state.filter); prefs.set('sort', state.sort); syncFilterUI();
+  const vis = visiblePhotos(), shown = new Set(vis);
+  const keep = [...state.selected].filter(id => shown.has(byId(id))); state.selected = new Set(keep);
+  restripe(); scheduleCohesion();
+  const p = active();
+  if (p && !shown.has(p)) { const nx = nextAfter(p, vis); if (nx) setActive(nx.id); else { refreshLibraryUI(); requestDraw(); } }
+  else { if (p) state.selected.add(p.id); refreshLibraryUI(); requestDraw(); }
+}
+function clearFilters() { state.filter = { flag: 'any', stars: 0, edit: 'any' }; applyFilters(); }
+$('#fFlag').onchange = e => { state.filter.flag = e.target.value; applyFilters(); };
+$('#fStars').onchange = e => { state.filter.stars = +e.target.value; applyFilters(); };
+$('#fEdit').onchange = e => { state.filter.edit = e.target.value; applyFilters(); };
+$('#sortBy').onchange = e => { state.sort = e.target.value; applyFilters(); };
+$('#fClear').onclick = clearFilters;
+$('#cohSum').onclick = () => { state.sort = 'coh'; applyFilters(); };
+$('#cohShow').onchange = e => { state.showCoh = e.target.checked; prefs.set('showCoh', state.showCoh); state.photos.forEach(updateBadges); refreshStageInfo(); drawCellLabels(true); };
+$('#autoAdv').onchange = e => { state.autoAdvance = e.target.checked; prefs.set('autoAdvance', state.autoAdvance); };
+$('#thumbSize').oninput = e => { state.thumbSize = +e.target.value; prefs.set('thumbSize', state.thumbSize); $('#grid').style.setProperty('--cell', state.thumbSize + 'px'); };
 
 /* ---------------- develop controls ---------------- */
 function sliderHTML([key, label, min, max, step, def]) {
   return `<div class="sl${key === 'halHue' || key === 'leakHue' ? ' hue-track' : ''}" data-key="${key}"><label for="s-${key}" title="Double-click to reset">${label}</label><span class="val"></span><button class="rst" type="button" data-reset="${key}" aria-label="Reset ${label}" title="Reset to ${def}">\u21BA</button><input type="range" id="s-${key}" data-key="${key}" min="${min}" max="${max}" step="${step}" value="${def}"></div>`;
 }
 function buildPanels() {
-  let html = `<details open><summary>Film stock</summary><div class="sec"><div class="stocks" id="stockList"></div>${sliderHTML(SLIDERS.strength)}
+  let html = `<details open><summary>Pregrade</summary><div class="sec">
+    <p class="hint">Evens each photo out before the look goes on. It stays with the photo, so copying a look, syncing or applying a preset leaves it alone.</p>
+    <div class="btn-grid"><button class="btn small" type="button" data-normalise="even" title="Bring exposure, colour cast and levels in line with the rest of the library. Keeps the library’s overall mood.">Even out</button><button class="btn small" type="button" data-normalise="neutral" title="Grey whites, middle-grey exposure and full levels, worked out per photo">Neutral</button></div>
+    <button class="btn small" type="button" data-matchref title="Adjust exposure, white balance and saturation until each graded photo sits with the graded reference">Match reference</button>
+    <div class="refinfo" id="refInfo"></div>
+    ${BASE_GROUP.sliders.map(sliderHTML).join('')}
+    <button class="linkbtn" type="button" data-clearbase>Clear pregrade</button>
+    </div></details>
+    <details open><summary>Film stock</summary><div class="sec"><div class="stocks" id="stockList"></div>${sliderHTML(SLIDERS.strength)}
     <p class="fineprint">Stock names describe the look each recipe approximates. Not affiliated with Kodak, Fujifilm, Ilford or CineStill.</p></div></details>
     <details open><summary>More film looks</summary><div class="sec">
     <p class="hint">${PACK_TOTAL} film stocks, from Portra and Velvia to Polaroid and Tri-X, with push and pull variants. Search, or open a brand.</p>
@@ -1302,6 +1910,9 @@ function buildPanels() {
   $('#groups').addEventListener('click', e => {
     const r = e.target.closest('[data-reset]'); if (r) { applySetting(r.dataset.reset, SLIDERS[r.dataset.reset][5]); syncControls(); return; }
     if (e.target.closest('[data-shuffle]')) { applySetting('texSeed', 2 + Math.floor(Math.random() * 9997)); return; }
+    if (e.target.closest('[data-normalise]')) { normaliseTargets(targets(), e.target.closest('[data-normalise]').dataset.normalise); return; }
+    if (e.target.closest('[data-matchref]')) { matchTargets(); return; }
+    if (e.target.closest('[data-clearbase]')) { const ts = targets(); applyPerPhoto(ts, () => Object.fromEntries(BASE_KEYS.map(k => [k, DEFAULTS[k]])), 'clear pregrade'); toast(`Pregrade cleared on ${plural(ts.length, 'photo')}`); return; }
     if (e.target.closest('[data-today]')) { const d = new Date(); const t = `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`; applySetting('dateText', t); syncControls(); return; }
     const rg = e.target.closest('[data-rmgroup]');
     if (rg) {
@@ -1390,17 +2001,21 @@ function syncControls() {
   const dt = $('#s-dateText'); if (dt && document.activeElement !== dt) dt.value = s.dateText;
   document.querySelectorAll('#groups [data-stock]').forEach(b => { const on = b.dataset.stock === s.stock; b.setAttribute('aria-pressed', on); const g = on && b.closest('.lut-group'); if (g && !g.open) g.open = true; });
 }
+// In compare and survey you're weighing options against each other, so edits only ever go to the outlined photo.
+const sideBySide = () => { if (state.view !== 'compare' && state.view !== 'survey') return false; const it = stageItems(); return it.length > 1 && !it[0].bypass; };
 function targets() {
   const p = active(); if (!p) return [];
-  if (state.editScope === 'all') return state.photos.filter(q => q.ready || q === p);
+  if (sideBySide()) return [p];
+  if (state.editScope === 'all') return visiblePhotos().filter(q => q.ready || q === p);
   if (state.editScope === 'selected') return selectedPhotos();
   return [p];
 }
 const scopeText = () => { const n = targets().length; return n > 1 ? `${n} photos` : 'the photo in view'; };
 function refreshScopeUI() {
-  const n = state.selected.size, total = state.photos.length;
-  document.querySelectorAll('input[name=editScope]').forEach(r => { r.checked = r.value === state.editScope; });
-  $('#scopeSelLabel').textContent = `Selected (${n})`; $('#scopeAllLabel').textContent = `All (${total})`;
+  const n = state.selected.size, total = visiblePhotos().length;
+  document.querySelectorAll('input[name=editScope]').forEach(r => { r.checked = r.value === state.editScope; r.disabled = sideBySide(); });
+  $('#scopeSelLabel').textContent = `Selected (${n})`; $('#scopeAllLabel').textContent = filterActive() ? `Showing (${total})` : `All (${total})`;
+  $('#scopeBar').querySelector('span').textContent = sideBySide() ? 'Edits apply to the outlined photo' : 'Edits apply to';
   $('#scopeBar').classList.toggle('many', targets().length > 1);
   $('#btnReset').textContent = targets().length > 1 ? `Reset ${targets().length} photos` : 'Reset photo';
   $('#presetHint').textContent = `Applies to ${scopeText()}. Change this with \u201cEdits apply to\u201d on the right.`;
@@ -1433,8 +2048,18 @@ function restoreStep(step, from, to, verb) {
   syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette(); syncUndoUI();
   toast(`${verb} ${step.label}${ps.length > 1 ? ` on ${ps.length} photos` : ''}`);
 }
-function undo() { closeStep(); const st = undoHist.undo.pop(); if (st) restoreStep(st, undoHist.undo, undoHist.redo, 'Undid'); }
-function redo() { closeStep(); const st = undoHist.redo.pop(); if (st) restoreStep(st, undoHist.redo, undoHist.undo, 'Redid'); }
+// Library changes (delete, variants) are steps too: they carry their own restore and again functions.
+function pushUndo(st) { closeStep(); undoHist.undo.push(st); if (undoHist.undo.length > 100) undoHist.undo.shift(); undoHist.redo = []; syncUndoUI(); }
+function undo() {
+  closeStep(); const st = undoHist.undo.pop(); if (!st) return;
+  if (st.restore) { st.restore(); undoHist.redo.push(st); syncUndoUI(); toast(`Undid ${st.label}`); return; }
+  restoreStep(st, undoHist.undo, undoHist.redo, 'Undid');
+}
+function redo() {
+  closeStep(); const st = undoHist.redo.pop(); if (!st) return;
+  if (st.again) { st.again(); undoHist.undo.push(st); syncUndoUI(); toast(`Redid ${st.label}`); return; }
+  restoreStep(st, undoHist.redo, undoHist.undo, 'Redid');
+}
 function syncUndoUI() {
   const u = $('#btnUndo'), r = $('#btnRedo'); if (!u) return;
   const last = undoHist.open || undoHist.undo[undoHist.undo.length - 1], next = undoHist.redo[undoHist.redo.length - 1];
@@ -1442,7 +2067,7 @@ function syncUndoUI() {
   r.disabled = !next; r.title = next ? `Redo ${next.label} (Ctrl/Cmd + Shift + Z)` : 'Nothing to redo';
 }
 $('#btnUndo').onclick = undo; $('#btnRedo').onclick = redo;
-const stepLabel = key => SLIDERS[key] ? SLIDERS[key][1].toLowerCase() : { stock: 'film look', dateText: 'date text', texSeed: 'pattern shuffle' }[key] || key;
+const stepLabel = key => SLIDERS[key] ? (BASE_KEYS.includes(key) ? 'pregrade ' : '') + SLIDERS[key][1].toLowerCase() : { stock: 'film look', dateText: 'date text', texSeed: 'pattern shuffle' }[key] || key;
 function applySetting(key, val) {
   const ts = targets(); if (!ts.length) return;
   beginStep(ts, stepLabel(key), 'set:' + key + ':' + ts.map(p => p.id).join(','));
@@ -1452,25 +2077,173 @@ function applySetting(key, val) {
   if (key === 'stock') refreshStageInfo();
   requestDraw(); queueThumbs(ts); schedulePalette();
 }
-function applySettingsTo(ps, settings, label, stepName) {
+// Looks (paste, match, presets) replace the creative settings but keep each photo's own pregrade. Reset clears both.
+function applySettingsTo(ps, settings, label, stepName, { keepBase = true } = {}) {
   if (!ps.length) return;
   beginStep(ps, stepName || 'change', null); closeStep();
-  ps.forEach(p => { p.settings = { ...DEFAULTS, ...settings }; persistSoon(p); });
+  ps.forEach(p => { p.settings = { ...DEFAULTS, ...stripBase(settings), ...(keepBase ? pickBase(p.settings) : {}) }; persistSoon(p); });
   syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette();
   if (label) toast(label);
 }
+function applyPerPhoto(ps, fn, stepName) {
+  ps = ps.filter(Boolean); if (!ps.length) return;
+  beginStep(ps, stepName, null); closeStep();
+  ps.forEach(p => { Object.assign(p.settings, fn(p)); persistSoon(p); });
+  syncControls(); refreshStageInfo(); requestDraw(); queueThumbs(ps); schedulePalette();
+}
+
+/* ---------------- pregrade: auto normalise and match to reference ---------------- */
+// Analysis of the original pixels, done once per photo: the darkest and brightest tones, the log-average lightness
+// (key), and the temperature and tint that would neutralise its near-neutral tones, with how far to trust that.
+function analyseOriginal(p) {
+  if (p.raw) return p.raw;
+  if (!p.thumb) return null;
+  const sc = Math.min(1, 160 / Math.max(p.thumb.width, p.thumb.height)), w = Math.max(1, Math.round(p.thumb.width * sc)), h = Math.max(1, Math.round(p.thumb.height * sc));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(p.thumb, 0, 0, w, h);
+  const px = x.getImageData(0, 0, w, h).data, n = w * h, Ls = new Float32Array(n), Ms = new Float32Array(n);
+  let sumLog = 0, nLog = 0, nr = 0, ng = 0, nb = 0, nw = 0, mr = 0, mg = 0, mb = 0, mn = 0, nGrey = 0;
+  for (let i = 0, k = 0; i < px.length; i += 4, k++) {
+    const r = S2L[px[i]], g = S2L[px[i + 1]], b = S2L[px[i + 2]], L = r * LW[0] + g * LW[1] + b * LW[2], mx = Math.max(r, g, b);
+    Ls[k] = L; Ms[k] = mx;
+    if (L > 0.002) { sumLog += Math.log(L); nLog++; }
+    if (L < 0.01 || L > 0.95) continue;
+    mr += r; mg += g; mb += b; mn++;
+    const sat = mx > 0 ? (mx - Math.min(r, g, b)) / mx : 0, wt = Math.max(0, 1 - sat / 0.3) ** 2;
+    nr += r * wt; ng += g * wt; nb += b * wt; nw += wt; if (sat < 0.12) nGrey++;
+  }
+  const pct = (arr, q) => { const s = Float32Array.from(arr).sort(); return s[clamp(Math.floor(q * (s.length - 1)), 0, s.length - 1)]; };
+  let gr = 1, gb = 1, conf = clamp(nGrey / (n * 0.1), 0, 1);
+  if (nw > n * 0.02) { gr = ng / Math.max(nr, 1e-6); gb = ng / Math.max(nb, 1e-6); }
+  else if (mn) { gr = mg / Math.max(mr, 1e-6); gb = mg / Math.max(mb, 1e-6); conf = Math.min(conf, 0.4); }   // few neutrals: grey world, trusted less
+  return p.raw = { lo: pct(Ls, 0.005), hi: pct(Ms, 0.995), key: nLog ? Math.exp(sumLog / nLog) : 0.18,
+    t: Math.log2(gr / gb) / 0.64 * 100, m: Math.log2(Math.sqrt(gr * gb)) / 0.22 * 100, conf };
+}
+const r2 = v => Math.round(v * 100) / 100;
+const median = v => { const s = [...v].sort((a, b) => a - b), h = s.length >> 1; return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2; };
+const levelsToSliders = (bp, wp) => ({ bBlack: Math.round(clamp(bp / 0.08 * 100, -100, 100)), bWhite: Math.round(clamp((1 - wp) / 0.4 * 100, -100, 100)) });
+const keyAfter = (a, bp, wp) => Math.max(1e-4, (a.key - bp) / (wp - bp));
+// Neutral: levels so the darkest 0.5% sit just above black and the brightest reach near white; exposure toward middle
+// grey (most of a small correction, much less of a big one, so a night scene brightens without turning to day); white
+// balance toward grey, trusted in proportion to how much of the frame is near-neutral, so a purple dusk sky survives.
+function neutralFor(p) {
+  const a = analyseOriginal(p); if (!a) return {};
+  const bp = clamp(a.lo - 0.003, -0.02, 0.06), wp = a.hi < 0.92 ? clamp(a.hi / 0.96, Math.max(0.6, bp + 0.3), 1) : 1;
+  const raw = Math.log2(0.18 / keyAfter(a, bp, wp)), mag = Math.abs(raw);
+  const ev = Math.sign(raw) * Math.min(1.25, mag < 1 ? mag * 0.85 : 0.85 + (mag - 1) * 0.3);
+  const cap = 25 + 35 * a.conf, k = 0.75 * a.conf;
+  return { bExposure: r2(ev), bTemp: Math.round(clamp(a.t * k, -cap, cap)), bTint: Math.round(clamp(a.m * k, -cap, cap)), ...levelsToSliders(bp, wp) };
+}
+// Even out: the same measurements aimed at the median of the photos showing instead of at neutral, so each photo only
+// loses what sets it apart (its own brightness, colour cast and tonal range) and the set keeps its overall mood.
+function evenOutFor(set) {
+  const as = set.map(analyseOriginal).filter(Boolean);
+  const mLo = median(as.map(a => a.lo)), mHi = median(as.map(a => a.hi)), mT = median(as.map(a => a.t)), mM = median(as.map(a => a.m));
+  const lev = a => {
+    const s = (mHi - mLo) / Math.max(0.02, a.hi - a.lo), bp = clamp(a.lo - mLo / s, -0.06, 0.08);
+    return [bp, clamp(bp + 1 / s, Math.max(0.6, bp + 0.2), 1.4)];
+  };
+  const mKey = median(as.map(a => keyAfter(a, ...lev(a))));
+  return p => {
+    const a = analyseOriginal(p); if (!a) return {};
+    const [bp, wp] = lev(a), trust = 0.85 * (0.4 + 0.6 * a.conf);
+    return { bExposure: r2(clamp(Math.log2(mKey / keyAfter(a, bp, wp)), -2, 2)), bTemp: Math.round(clamp((a.t - mT) * trust, -50, 50)), bTint: Math.round(clamp((a.m - mM) * trust, -50, 50)), ...levelsToSliders(bp, wp) };
+  };
+}
+function normaliseTargets(ps, mode = 'even') {
+  ps = ps.filter(p => p.ready); if (!ps.length) return;
+  const set = visiblePhotos().filter(p => p.ready);
+  if (mode === 'even' && set.length < 3) { toast('Even out compares each photo with the rest, so it needs three or more photos showing. Try Neutral.', 5000); return; }
+  applyPerPhoto(ps, mode === 'even' ? evenOutFor(set) : neutralFor, mode === 'even' ? 'even out' : 'neutral pregrade');
+  toast(mode === 'even' ? `Evened out ${plural(ps.length, 'photo')} against the ${set.length} showing. Ctrl/Cmd + Z to undo.` : `Neutralised ${plural(ps.length, 'photo')}. Ctrl/Cmd + Z to undo.`, 5000);
+}
+// Match: measure the graded photo against the graded reference and solve for pregrade exposure, temperature, tint and
+// saturation (a few Gauss–Newton steps on an 80 px render) so lightness, neutral cast and colourfulness line up.
+// Each step is held inside a trust region and only kept if it brings the photo closer, so very different scenes get
+// a sensible partial match instead of being driven to the ends of the sliders.
+const MATCH_KEYS = ['bExposure', 'bTemp', 'bTint', 'bSat'], MATCH_PROBE = [0.2, 10, 10, 12], MATCH_W = [1, 1.6, 1.6, 0.7];
+const MATCH_STEP = [0.6, 20, 20, 25], MATCH_LIM = [[-2, 2], [-60, 60], [-60, 60], [-60, 60]];
+function solveLinear(A, b) {   // Gaussian elimination with partial pivoting
+  const n = b.length, M = A.map((r, i) => [...r, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let piv = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+    [M[c], M[piv]] = [M[piv], M[c]]; if (Math.abs(M[c][c]) < 1e-12) return null;
+    for (let r = c + 1; r < n; r++) { const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+  }
+  const x = new Array(n).fill(0);
+  for (let r = n - 1; r >= 0; r--) { let s = M[r][n]; for (let k = r + 1; k < n; k++) s -= M[r][k] * x[k]; x[r] = s / M[r][r]; }
+  return x;
+}
+function matchToRef(p, ref) {
+  const feat = st => [st.L, st.a, st.b, st.C], target = feat(ref);
+  const withX = x => ({ ...p.settings, ...Object.fromEntries(MATCH_KEYS.map((k, i) => [k, x[i]])) });
+  const f = x => feat(measure(p, withX(x), false));
+  const cost = fv => fv.reduce((s, v, j) => s + ((target[j] - v) * MATCH_W[j]) ** 2, 0);
+  const inLim = x => x.map((v, i) => clamp(v, MATCH_LIM[i][0], MATCH_LIM[i][1]));
+  let x = inLim(MATCH_KEYS.map(k => p.settings[k] || 0)), f0 = f(x), c0 = cost(f0);
+  for (let it = 0; it < 5 && c0 > 0.5; it++) {
+    const J = MATCH_KEYS.map((_, i) => { const xp = x.slice(); xp[i] += MATCH_PROBE[i]; const fi = f(xp); return fi.map((v, j) => (v - f0[j]) / MATCH_PROBE[i]); });   // J[i][j] = d feature j / d param i
+    const r = target.map((t, j) => (t - f0[j]) * MATCH_W[j]);
+    const A = MATCH_KEYS.map((_, a) => MATCH_KEYS.map((_, b) => { let s = 0; for (let j = 0; j < 4; j++) s += J[a][j] * MATCH_W[j] * J[b][j] * MATCH_W[j]; return s; }));
+    A.forEach((row, i) => row[i] = row[i] * 1.3 + 1e-6);   // Levenberg–Marquardt damping
+    const g = MATCH_KEYS.map((_, a) => { let s = 0; for (let j = 0; j < 4; j++) s += J[a][j] * MATCH_W[j] * r[j]; return s; });
+    let dx = solveLinear(A, g); if (!dx) break;
+    const over = Math.max(1, ...dx.map((d, i) => Math.abs(d) / MATCH_STEP[i])); dx = dx.map(d => d / over);
+    let moved = false;
+    for (let h = 0; h < 4 && !moved; h++, dx = dx.map(d => d / 2)) {
+      const x1 = inLim(x.map((v, i) => v + dx[i])), f1 = f(x1), c1 = cost(f1);
+      if (c1 < c0) { x = x1; f0 = f1; c0 = c1; moved = true; }
+    }
+    if (!moved) break;
+  }
+  return { bExposure: Math.round(x[0] * 100) / 100, bTemp: Math.round(x[1]), bTint: Math.round(x[2]), bSat: Math.round(x[3]) };
+}
+async function matchTargets(ps = targets()) {
+  const ref = byId(state.refId);
+  if (!ref) { toast('Set a reference photo first: right-click a photo and choose Set as reference, or press R.', 5000); return; }
+  const ts = ps.filter(p => p.ready && p !== ref);
+  if (!ts.length) { toast('That’s the reference itself. Choose another photo, or set the scope to Selected or All.'); return; }
+  await Promise.all([ref, ...ts].map(p => ensureLut(p.settings.stock)));
+  ref.stats = measure(ref);
+  const results = new Map();
+  for (let i = 0; i < ts.length; i++) {
+    setBusy(`Matching ${i + 1} of ${ts.length}…`); await new Promise(r => setTimeout(r, 0));
+    results.set(ts[i].id, matchToRef(ts[i], ref.stats));
+  }
+  setBusy(null);
+  applyPerPhoto(ts, p => results.get(p.id), 'match reference');
+  toast(`Matched ${plural(ts.length, 'photo')} to the reference. Ctrl/Cmd + Z to undo.`);
+}
+function renderRefInfo() {
+  const box = $('#refInfo'); if (!box) return;
+  const p = active(), ref = byId(state.refId);
+  const btn = document.querySelector('[data-matchref]'); if (btn) btn.disabled = !ref;
+  if (!p) { box.innerHTML = '<span class="hint">Open a photo.</span>'; return; }
+  if (p === ref) { box.innerHTML = '<span><b>This is the reference photo.</b></span><span class="hint">Every other photo is scored against it. Press R to clear it.</span>'; return; }
+  const c = p.coh;
+  const head = ref ? 'Against the reference' : 'Against the library average';
+  if (!c) { box.innerHTML = `<span class="hint">${ref ? 'Measuring…' : 'No reference yet. Right-click your best photo and choose Set as reference (or press R) to score and match the rest against it.'}</span>`; return; }
+  const s = Math.round(c.score), stops = c.dL / 17;
+  const rows = [];
+  if (Math.abs(stops) >= 0.1) rows.push(['Brightness', `${Math.abs(stops).toFixed(1)} stops ${stops > 0 ? 'brighter' : 'darker'}`]);
+  if (Math.abs(c.dK) >= 2) rows.push(['Contrast', c.dK > 0 ? 'punchier' : 'flatter']);
+  const cast = [Math.abs(c.db) >= 1.5 ? (c.db > 0 ? 'warmer' : 'cooler') : '', Math.abs(c.da) >= 1.5 ? (c.da > 0 ? 'more magenta' : 'greener') : ''].filter(Boolean);
+  if (cast.length) rows.push(['Colour cast', cast.join(', ')]);
+  if (Math.abs(c.dC) >= 2) rows.push(['Colour', c.dC > 0 ? 'more saturated' : 'more muted']);
+  if (c.dPal >= 12) rows.push(['Palette', c.dPal >= 25 ? 'very different' : 'somewhat different']);
+  box.innerHTML = `<span class="hint">${head}</span><span class="score"><b style="color:var(--${cohClass(s) === 'far' ? 'safelight' : cohClass(s)})">${s}</b><span>${cohWord(s)}</span></span>` +
+    (rows.length ? `<ul>${rows.map(r => `<li><span>${r[0]}</span><span>${r[1]}</span></li>`).join('')}</ul>` : '<span class="hint">Sits right with it.</span>');
+}
 
 /* ---------------- library actions ---------------- */
-$('#btnSelAll').onclick = () => { state.selected = new Set(state.photos.map(p => p.id)); refreshLibraryUI(); };
-$('#btnSelOne').onclick = () => { if (state.activeId) { state.selected = new Set([state.activeId]); refreshLibraryUI(); } };
+$('#btnSelAll').onclick = () => { state.selected = new Set(visiblePhotos().map(p => p.id)); if (state.activeId) state.selected.add(state.activeId); refreshLibraryUI(); requestDraw(); };
+$('#btnSelOne').onclick = () => { if (state.activeId) { state.selected = new Set([state.activeId]); refreshLibraryUI(); requestDraw(); } };
 function copySettings() { const p = active(); if (!p) return; state.clip = { ...p.settings }; refreshLibraryUI(); toast('Settings copied'); }
 function pasteSettings() { if (!state.clip) return; const ps = targets(); applySettingsTo(ps, state.clip, `Pasted onto ${ps.length} photo${ps.length === 1 ? '' : 's'}`, 'paste'); }
 $('#btnCopy').onclick = copySettings; $('#btnPaste').onclick = pasteSettings;
 $('#btnSync').onclick = () => { const p = active(); if (!p) return; const ps = selectedPhotos().filter(q => q !== p); applySettingsTo(ps, p.settings, `Matched ${ps.length} photo${ps.length === 1 ? '' : 's'} to this one`, 'match'); };
-$('#btnRemove').onclick = () => { const n = state.selected.size; $('#removeText').textContent = `Remove ${n} photo${n === 1 ? '' : 's'} from the library? Your original files aren’t touched.`; $('#removeConfirm').hidden = false; };
-$('#removeNo').onclick = () => { $('#removeConfirm').hidden = true; };
-$('#removeYes').onclick = () => { $('#removeConfirm').hidden = true; removePhotos([...state.selected]); };
-$('#btnReset').onclick = () => { const ts = targets(); applySettingsTo(ts, {}, ts.length > 1 ? `Reset ${ts.length} photos` : 'Photo reset', 'reset'); };
+$('#btnRemove').onclick = () => removePhotos(selectedPhotos().map(p => p.id));
+$('#btnReset').onclick = () => { const ts = targets(); applySettingsTo(ts, {}, ts.length > 1 ? `Reset ${ts.length} photos` : 'Photo reset', 'reset', { keepBase: false }); };
 
 function importFiles(list) {
   const files = [...list].filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|avif|gif|bmp|heic)$/i.test(f.name));
@@ -1509,7 +2282,7 @@ $('#presetList').addEventListener('click', e => {
 $('#presetSave').onclick = () => {
   const p = active(); if (!p) return;
   const name = $('#presetName').value.trim() || `My look ${state.userPresets.length + 1}`;
-  const s = {}; for (const k of Object.keys(DEFAULTS)) if (p.settings[k] !== DEFAULTS[k]) s[k] = p.settings[k];
+  const s = {}; for (const k of Object.keys(DEFAULTS)) if (p.settings[k] !== DEFAULTS[k] && !BASE_KEYS.includes(k)) s[k] = p.settings[k];
   state.userPresets.push({ name, s }); prefs.set('presets', state.userPresets); $('#presetName').value = ''; renderPresets(); toast(`Saved “${name}”`);
 };
 $('#presetName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#presetSave').click(); });
@@ -1578,7 +2351,7 @@ function removeLutGroup(g) {
 }
 $('#btnCube').onclick = async () => {
   const p = active(); if (!p) return;
-  const N = 33, W = N * N, s = { ...p.settings, grain: 0, halation: 0, bloom: 0, vignette: 0, dust: 0, hairs: 0, scratches: 0, stains: 0, leak: 0, soften: 0, aberration: 0, frameEdge: 0, dateStamp: 0 };
+  const N = 33, W = N * N, s = { ...p.settings, ...Object.fromEntries(BASE_KEYS.map(k => [k, 0])), grain: 0, halation: 0, bloom: 0, vignette: 0, dust: 0, hairs: 0, scratches: 0, stains: 0, leak: 0, soften: 0, aberration: 0, frameEdge: 0, dateStamp: 0 };
   const id = new Float32Array(W * N * 4);
   for (let b = 0; b < N; b++) for (let x = 0; x < W; x++) { const i = (b * W + x) * 4; id[i] = (x % N) / (N - 1); id[i + 1] = Math.floor(x / N) / (N - 1); id[i + 2] = b / (N - 1); id[i + 3] = 1; }
   const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
@@ -1621,8 +2394,12 @@ async function saveFile(name, data) {
 const dlg = $('#exportDlg');
 $('#btnExport').onclick = () => {
   if (!state.photos.length) { toast('Add some photos first'); return; }
-  const n = state.selected.size;
-  $('#scopeSel').textContent = `Selected (${n})`; $('#scopeAll').textContent = `All (${state.photos.length})`;
+  const n = selectedPhotos().length, picks = state.photos.filter(p => p.flag === 1).length;
+  const opts = [['active', 'This photo'], ['selected', `Selected (${n})`]];
+  if (picks) opts.push(['picks', `Picks (${picks})`]);
+  if (filterActive()) opts.push(['shown', `Showing (${visiblePhotos().length})`]);
+  opts.push(['all', `All (${state.photos.length})`]);
+  $('#scopeSeg').innerHTML = opts.map(([v, t]) => `<label><input type="radio" name="scope" value="${v}"><span>${esc(t)}</span></label>`).join('');
   dlg.querySelector(`input[name=scope][value=${n > 1 ? 'selected' : 'active'}]`).checked = true;
   const ex = prefs.get('export', {}); if (ex.size != null) $('#exSize').value = ex.size; if (ex.fmt) dlg.querySelector(`input[name=fmt][value=${ex.fmt}]`).checked = true;
   if (ex.q) $('#exQuality').value = ex.q; if (ex.suffix != null) $('#exSuffix').value = ex.suffix;
@@ -1649,7 +2426,7 @@ async function exportOne(p, longEdge, mime, q) {
 }
 $('#exGo').onclick = async () => {
   const scope = dlg.querySelector('input[name=scope]:checked').value;
-  const ps = scope === 'all' ? state.photos.filter(p => p.ready) : scope === 'selected' ? selectedPhotos().filter(p => p.ready) : [active()].filter(Boolean);
+  const ps = (scope === 'all' ? state.photos : scope === 'shown' ? visiblePhotos() : scope === 'picks' ? state.photos.filter(p => p.flag === 1) : scope === 'selected' ? selectedPhotos() : [active()]).filter(p => p?.ready);
   if (!ps.length) return;
   const fmt = dlg.querySelector('input[name=fmt]:checked').value, longEdge = +$('#exSize').value, q = +$('#exQuality').value / 100, suffix = $('#exSuffix').value.trim();
   prefs.set('export', { size: longEdge, fmt, q: Math.round(q * 100), suffix });
@@ -1663,7 +2440,7 @@ $('#exGo').onclick = async () => {
       await new Promise(r => setTimeout(r, 0));
       await ensureLut(ps[i].settings.stock);
       const blob = await exportOne(ps[i], longEdge, mime, q);
-      let base = ps[i].name.replace(/\.[^.]+$/, '') + suffix, name = `${base}.${ext}`, k = 2;
+      let base = ps[i].name.replace(/\.[^.]+$/, '') + (ps[i].vnum ? `-v${ps[i].vnum}` : '') + suffix, name = `${base}.${ext}`, k = 2;
       while (used.has(name)) name = `${base}-${k++}.${ext}`; used.add(name);
       files.push({ name, blob });
     }
@@ -1800,16 +2577,16 @@ function setZoom(z, at) {
   if (z === '1:1') z = 1;
   if (z !== 'fit') { z = clamp(z, 0.05, ZOOM_MAX); if (z <= fitScale(p) * 1.001) z = 'fit'; }
   state.zoom = z; if (at) state.pan = { x: at[0], y: at[1] };
-  if (z !== 'fit') ensureFull(p);
+  if (z !== 'fit' && state.cells.length <= 1) ensureFull(p);   // side by side, the previews are sharp enough and both stay loaded
   syncZoomBtn(); requestDraw();
 }
-// Zoom so the image point under (fx, fy) — fractions of the canvas — stays put.
-function zoomTo(scale, fx = 0.5, fy = 0.5) {
-  const p = active(); if (!p?.ready) return;
-  const W = canvas.width, H = canvas.height, v = viewRect(p, W, H), ip = [v[0] + fx * v[2], v[1] + fy * v[3]];
-  scale = clamp(scale, fitScale(p), ZOOM_MAX);
-  if (scale <= fitScale(p) * 1.001) { setZoom('fit'); return; }
-  const vw = W / (p.w * scale), vh = H / (p.h * scale);
+// Zoom so the image point under (fx, fy), fractions of the photo's cell, stays put. In compare and survey the pan is shared.
+function zoomTo(scale, fx = 0.5, fy = 0.5, c = cellOf(active())) {
+  const p = c.p || active(); if (!p?.ready) return;
+  const v = viewRect(p, c.w, c.h, c), ip = [v[0] + fx * v[2], v[1] + fy * v[3]];
+  scale = clamp(scale, fitScale(p, c), ZOOM_MAX);
+  if (scale <= fitScale(p, c) * 1.001) { setZoom('fit'); return; }
+  const vw = c.w / (p.w * scale), vh = c.h / (p.h * scale);
   setZoom(scale, [ip[0] - fx * vw + vw / 2, ip[1] - fy * vh + vh / 2]);
 }
 function zoomStep(dir, fx, fy) {
@@ -1822,25 +2599,28 @@ function zoomStep(dir, fx, fy) {
 $('#btnZoom').onclick = () => { const p = active(); if (p) zoomTo(state.zoom === 'fit' ? Math.max(1, fitScale(p) * 2) : 0); };
 $('#zoomIn').onclick = () => zoomStep(1);
 $('#zoomOut').onclick = () => zoomStep(-1);
+// Which photo the pointer is over, and where on it: img is in image fractions, px in canvas device pixels.
+function canvasToImage(ev) {
+  const r = canvas.getBoundingClientRect(), dpr = canvas.width / r.width;
+  const dx = (ev.clientX - r.left) * dpr, dy = (ev.clientY - r.top) * dpr;
+  const c = state.cells.find(c => dx >= c.x && dy >= c.y && dx < c.x + c.w && dy < c.y + c.h) || (state.cells.length <= 1 ? fullCell() : null);
+  if (!c || !c.p) return null;
+  const v = viewRect(c.p, c.w, c.h, c), fx = (dx - c.x) / c.w, fy = (dy - c.y) / c.h;
+  return { cell: c, fx, fy, img: [v[0] + fx * v[2], v[1] + fy * v[3]], px: [Math.floor(dx), Math.floor(dy)] };
+}
 stage.addEventListener('wheel', e => {
   const p = active(); if (!p?.ready) return;
-  const r = canvas.getBoundingClientRect(), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1;
+  const r = canvas.getBoundingClientRect(), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1, hit = canvasToImage(e);
   if (e.ctrlKey || e.metaKey) {           // trackpad pinch arrives as ctrl+wheel
-    e.preventDefault();
-    zoomTo(curScale(p) * Math.exp(-clamp(e.deltaY * k, -60, 60) * 0.01), (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+    e.preventDefault(); if (!hit) return;
+    zoomTo(curScale(hit.cell.p, hit.cell) * Math.exp(-clamp(e.deltaY * k, -60, 60) * 0.01), hit.fx, hit.fy, hit.cell);
   } else if (state.zoom !== 'fit') {      // two-finger scroll pans
     e.preventDefault();
-    const v = viewRect(p, canvas.width, canvas.height), dpr = canvas.width / r.width;
-    state.pan = { x: state.pan.x + e.deltaX * k * dpr * v[2] / canvas.width, y: state.pan.y + e.deltaY * k * dpr * v[3] / canvas.height };
+    const c = cellOf(p), v = viewRect(p, c.w, c.h, c), dpr = canvas.width / r.width;
+    state.pan = { x: state.pan.x + e.deltaX * k * dpr * v[2] / c.w, y: state.pan.y + e.deltaY * k * dpr * v[3] / c.h };
     requestDraw();
   }
 }, { passive: false });
-function canvasToImage(ev) {
-  const p = active(); if (!p) return null;
-  const r = canvas.getBoundingClientRect(), v = viewRect(p, canvas.width, canvas.height);
-  const x = (ev.clientX - r.left) / r.width, y = (ev.clientY - r.top) / r.height;
-  return { img: [v[0] + x * v[2], v[1] + y * v[3]], px: [Math.floor(x * canvas.width), Math.floor(y * canvas.height)] };
-}
 function samplePixel(px) {
   const W = canvas.width, H = canvas.height, x = clamp(px[0] - 1, 0, W - 3), y = clamp(H - px[1] - 2, 0, H - 3), buf = new Uint8Array(36);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.readPixels(x, y, 3, 3, gl.RGBA, gl.UNSIGNED_BYTE, buf);
@@ -1854,15 +2634,15 @@ stage.addEventListener('pointerdown', e => {
   if (!active()?.ready || e.button !== 0) return;
   touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (touches.size === 2) { drag = null; pinch = pinchInfo(); stage.classList.remove('dragging'); return; }
-  const v = viewRect(active(), canvas.width, canvas.height);
-  drag = { x: e.clientX, y: e.clientY, moved: false, pan: { ...state.pan }, perPx: [v[2] / canvas.width, v[3] / canvas.height] };
+  const c = cellOf(active()), v = viewRect(active(), c.w, c.h, c);
+  drag = { x: e.clientX, y: e.clientY, moved: false, pan: { ...state.pan }, perPx: [v[2] / c.w, v[3] / c.h] };
   stage.setPointerCapture(e.pointerId);
   if (state.zoom !== 'fit' && !state.picking) stage.classList.add('dragging');
 });
 stage.addEventListener('pointermove', e => {
   const p = active(); if (!p?.ready) return;
   if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (pinch && touches.size === 2) { const n = pinchInfo(); zoomTo(curScale(p) * n.d / Math.max(1, pinch.d), n.fx, n.fy); pinch = n; return; }
+  if (pinch && touches.size === 2) { const n = pinchInfo(), c = cellOf(p); zoomTo(curScale(p, c) * n.d / Math.max(1, pinch.d), (n.fx * canvas.width - c.x) / c.w, (n.fy * canvas.height - c.y) / c.h, c); pinch = n; return; }
   if (drag) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
@@ -1889,7 +2669,13 @@ stage.addEventListener('pointerup', e => {
   const hit = canvasToImage(e); if (!hit) return;
   const inside = hit.img[0] >= 0 && hit.img[1] >= 0 && hit.img[0] <= 1 && hit.img[1] <= 1;
   if (state.picking) { if (inside) { const hex = rgbToHex(samplePixel(hit.px)); addSwatch(hex); toast(`Added ${hex}`); } return; }
+  if (hit.cell.p !== active()) { setActive(hit.cell.p.id, { keepSelection: true }); return; }   // compare/survey: first click picks the side to edit
   if (state.zoom === 'fit') { if (inside) setZoom(Math.max(1, fitScale(active()) * 2), hit.img); } else setZoom('fit');
+});
+stage.addEventListener('dblclick', e => {
+  if (state.view === 'loupe' || state.picking) return;
+  const hit = canvasToImage(e); if (!hit) return;
+  setActive(hit.cell.p.id); setView('loupe');
 });
 stage.addEventListener('pointercancel', e => { touches.delete(e.pointerId); pinch = null; drag = null; stage.classList.remove('dragging'); });
 function setBefore(on) { if (state.before === on) return; state.before = on; refreshStageInfo(); requestDraw(); }
@@ -1902,14 +2688,12 @@ bb.addEventListener('keyup', () => setBefore(false));
 window.addEventListener('keydown', e => {
   const typing = e.target.closest?.('input,textarea,select,dialog');
   const mod = e.metaKey || e.ctrlKey;
+  if (!$('#ctx').hidden) { if (e.key === 'Escape') closeMenu(); return; }
   if (e.key === 'Escape' && state.picking) { setPicking(false); return; }
   // Left/right always move between photos, even with a slider focused (up/down still nudge the slider).
-  const onSlider = e.target.matches?.('input[type=range]') && !e.target.closest('dialog');
+  const onSlider = e.target.matches?.('input[type=range]') && !e.target.closest('dialog') && !e.target.closest('.libbar');
   if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && !mod && !e.altKey && (!typing || onSlider)) {
-    e.preventDefault();
-    const i = state.photos.findIndex(p => p.id === state.activeId), j = clamp(i + (e.key === 'ArrowRight' ? 1 : -1), 0, state.photos.length - 1);
-    if (state.photos[j] && j !== i) setActive(state.photos[j].id);
-    return;
+    e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); return;
   }
   if (mod && e.key.toLowerCase() === 'z' && (!typing || onSlider)) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
   if (mod && e.key.toLowerCase() === 'y' && (!typing || onSlider)) { e.preventDefault(); redo(); return; }
@@ -1918,11 +2702,94 @@ window.addEventListener('keydown', e => {
   if (mod && e.shiftKey && e.key.toLowerCase() === 'c') { e.preventDefault(); copySettings(); return; }
   if (mod && e.shiftKey && e.key.toLowerCase() === 'v') { e.preventDefault(); pasteSettings(); return; }
   if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); $('#btnSelAll').click(); return; }
-  if (mod) return;
-  if (e.key === 'z' || e.key === 'Z') { $('#btnZoom').click(); return; }
+  if (mod && e.key === "'") { e.preventDefault(); $('#btnVariant').click(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !e.altKey) { e.preventDefault(); const ps = selectedPhotos(); removePhotos((ps.length ? ps : [active()]).filter(Boolean).map(p => p.id)); return; }
+  if (mod || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (state.view === 'grid' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    e.preventDefault();
+    const cols = getComputedStyle($('#gridTrack')).gridTemplateColumns.split(' ').length || 1;
+    step(e.key === 'ArrowDown' ? cols : -cols); return;
+  }
+  if (e.key === 'Enter' && state.view === 'grid' && !e.target.closest?.('button')) { setView('loupe'); return; }
+  if (e.key === 'Escape' && state.view !== 'loupe') { setView('loupe'); return; }
+  if (/^[0-5]$/.test(e.key)) { setRating(cullTargets(), +e.key); return; }
+  if (k === 'p') { setFlag(cullTargets(), 1); return; }
+  if (k === 'x') { setFlag(cullTargets(), -1); return; }
+  if (k === 'u') { setFlag(cullTargets(), 0, { noAdvance: true }); return; }
+  if (k === 'r') { $('#btnRef').click(); return; }
+  if (k === 'g') { setView('grid'); return; }
+  if (k === 'e') { setView('loupe'); return; }
+  if (k === 'c') { setView('compare'); return; }
+  if (k === 'n') { setView('survey'); return; }
+  if (e.key === '?') { $('#keysDlg').showModal(); return; }
+  if (k === 'z') { $('#btnZoom').click(); return; }
   if (e.key === '=' || e.key === '+') { zoomStep(1); return; }
   if (e.key === '-' || e.key === '_') { zoomStep(-1); return; }
-  if (e.key === '0') { setZoom('fit'); return; }
+});
+$('#btnKeys').onclick = () => $('#keysDlg').showModal();
+
+/* ---------------- right-click menu (filmstrip, grid and the photo itself) ---------------- */
+const ctx = $('#ctx');
+function closeMenu() { ctx.hidden = true; ctx.innerHTML = ''; }
+function openMenu(ev, id) {
+  ev.preventDefault();
+  if (!state.selected.has(id)) setActive(id);
+  const p = byId(id), sel = selectedPhotos(), ps = sel.includes(p) && sel.length > 1 ? sel : [p], n = ps.length, ref = byId(state.refId);
+  const many = n > 1 ? ` ${n} photos` : '';
+  const items = [
+    ['head', n > 1 ? `${n} photos selected` : displayName(p)],
+    ['rate', ps.length === 1 ? p.rating : -1],
+    ['Pick', 'P', () => setFlag(ps, 1, { noAdvance: true })], ['Reject', 'X', () => setFlag(ps, -1, { noAdvance: true })],
+    ps.some(q => q.flag) && ['Clear flag', 'U', () => setFlag(ps, 0, { noAdvance: true })],
+    '-',
+    n === 1 && [p.id === state.refId ? 'Clear reference' : 'Set as reference', 'R', () => setRef(p.id === state.refId ? null : p.id)],
+    n === 1 && ref && p !== ref && ['Compare with reference', '', () => { state.selected = new Set([p.id, ref.id]); state.pair = [ref.id, p.id]; setActive(p.id, { keepSelection: true }); setView('compare'); requestDraw(); }],
+    n === 2 && ['Compare these two', 'C', () => { state.pair = ps.map(q => q.id); setView('compare'); requestDraw(); }],
+    n > 2 && ['Survey these', 'N', () => setView('survey')],
+    n === 1 && p.sim && [`Survey its look-alikes (${p.simN})`, '', () => { const g = visiblePhotos().filter(q => q.sim === p.sim); state.selected = new Set(g.map(q => q.id)); setActive(p.id, { keepSelection: true }); setView(g.length === 2 ? 'compare' : 'survey'); requestDraw(); }],
+    n === 1 && ['Before and after', '', () => { state.selected = new Set([p.id]); setActive(p.id); setView('compare'); }],
+    [`Make a variant${n > 1 ? ` of each` : ''}`, 'Ctrl/Cmd \'', () => makeVariants(ps)],
+    '-',
+    n === 1 && ['Copy settings', '', () => { setActive(p.id); copySettings(); }],
+    state.clip && [`Paste settings${many}`, '', () => applySettingsTo(ps, state.clip, `Pasted onto ${plural(n, 'photo')}`, 'paste')],
+    ['Even out' + many, '', () => normaliseTargets(ps, 'even')],
+    ref && !(n === 1 && p === ref) && ['Match to reference' + many, '', () => matchTargets(ps)],
+    ['Reset' + many, '', () => applySettingsTo(ps, {}, n > 1 ? `Reset ${n} photos` : 'Photo reset', 'reset', { keepBase: false })],
+    ['Export' + many + '…', '', () => { state.selected = new Set(ps.map(q => q.id)); refreshLibraryUI(); $('#btnExport').click(); }],
+    '-',
+    ['Delete' + many, 'Delete', () => removePhotos(ps.map(q => q.id)), 'danger'],
+  ].filter(Boolean);
+  ctx.innerHTML = '';
+  for (const it of items) {
+    if (it === '-') { ctx.appendChild(document.createElement('hr')); continue; }
+    if (it[0] === 'head') { const h = document.createElement('div'); h.className = 'ctx-head'; h.textContent = it[1]; ctx.appendChild(h); continue; }
+    if (it[0] === 'rate') {
+      const row = document.createElement('div'); row.className = 'rate-row'; row.setAttribute('role', 'group'); row.setAttribute('aria-label', 'Rating');
+      row.innerHTML = [1, 2, 3, 4, 5].map(k => `<button type="button" role="menuitem" data-r="${k}" class="${it[1] >= k ? 'on' : ''}" title="${k} star${k > 1 ? 's' : ''} (${k})">★</button>`).join('') + '<button type="button" role="menuitem" class="clear" data-r="0" title="No rating (0)">clear</button>';
+      row.onclick = e => { const b = e.target.closest('[data-r]'); if (b) { closeMenu(); setRating(ps, +b.dataset.r, { noAdvance: true }); } };
+      ctx.appendChild(row); continue;
+    }
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'menuitem'); if (it[3]) b.className = it[3];
+    b.innerHTML = `<span>${esc(it[0])}</span>${it[1] ? `<kbd>${esc(it[1])}</kbd>` : ''}`;
+    b.onclick = () => { closeMenu(); it[2](); };
+    ctx.appendChild(b);
+  }
+  ctx.hidden = false;
+  const r = ctx.getBoundingClientRect();
+  ctx.style.left = Math.min(ev.clientX, innerWidth - r.width - 8) + 'px';
+  ctx.style.top = Math.max(8, Math.min(ev.clientY, innerHeight - r.height - 8)) + 'px';
+  ctx.querySelector('button')?.focus({ preventScroll: true });
+}
+$('#filmTrack').addEventListener('contextmenu', e => { const el = e.target.closest('.frame'); if (el) openMenu(e, el.dataset.id); });
+$('#gridTrack').addEventListener('contextmenu', e => { const el = e.target.closest('.cell'); if (el) openMenu(e, el.dataset.id); });
+stage.addEventListener('contextmenu', e => { if (state.picking) return; const hit = canvasToImage(e); if (hit) openMenu(e, hit.cell.p.id); });
+window.addEventListener('pointerdown', e => { if (!ctx.hidden && !ctx.contains(e.target)) closeMenu(); }, true);
+window.addEventListener('blur', closeMenu);
+window.addEventListener('resize', closeMenu);
+ctx.addEventListener('keydown', e => {
+  const bs = [...ctx.querySelectorAll('button')], i = bs.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); bs[(i + (e.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length]?.focus(); }
 });
 window.addEventListener('keyup', e => { if (e.key === '\\') setBefore(false); });
 new ResizeObserver(() => requestDraw()).observe(stage);
@@ -1992,6 +2859,7 @@ async function boot() {
   try { initGL(); } catch (e) { $('#stage').innerHTML = `<div class="fatal"><b>The film engine didn’t start.</b><p class="hint">${esc(e.message)}</p></div>`; return; }
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); toast('The graphics card reset. Reload the page to keep editing.', 8000); });
   buildPanels(); renderPresets(); renderSwatchList(); updateStageCursor(); $('#cmp').hidden = !state.showCmp;
+  $('#app').classList.toggle('v-grid', state.view === 'grid'); syncFilterUI();
   const ok = await DB.open();
   if (ok) {
     for (const l of (await DB.all('luts')) || []) LUTS.set(l.id, { ...l, custom: true });
@@ -2007,8 +2875,10 @@ async function boot() {
     added[1].settings = { ...DEFAULTS, ...BUILTIN_PRESETS[0].s };
     added.forEach(persistSoon);
   }
-  if (state.activeId) setActive(state.activeId);
-  refreshLibraryUI(); syncControls(); requestDraw();
+  if (state.refId && !byId(state.refId)) setRef(null, true);
+  const vis = visiblePhotos();
+  if (vis.length && !vis.includes(active())) setActive(vis[0].id); else if (state.activeId) setActive(state.activeId);
+  restripe(); refreshLibraryUI(); syncControls(); renderRefInfo(); requestDraw();
 }
 boot();
 </script>
