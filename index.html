@@ -191,6 +191,9 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(-
 /* colour check */
 .cmp{grid-area:cmp;background:var(--panel);border-radius:var(--r);padding:10px 12px;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;align-items:start}
 .cmp h3{margin:0 0 7px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;font-variation-settings:"wdth" 85}
+.cmp h3 .linkbtn{text-transform:none;letter-spacing:0;font-size:11px;margin-left:8px;font-weight:400}
+.cmp.no-cards{grid-template-columns:minmax(0,1fr)}
+.cmp.no-cards .cmp-cards,.cmp:not(.no-cards) #cardsShow{display:none}
 .cards{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;scrollbar-color:#444 transparent}
 .card{flex:none;display:flex;gap:8px;align-items:center;background:var(--panel-2);border-radius:6px;padding:6px 9px 6px 6px;min-width:0}
 .split{display:flex;width:38px;height:30px;border-radius:4px;overflow:hidden;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
@@ -204,9 +207,11 @@ input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(-
 .pill.far{background:rgba(143,140,136,.18);color:var(--far)}
 .up{color:var(--ok)} .down{color:var(--safelight)}
 .bars{display:flex;flex-direction:column;gap:5px}
-.bar-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:center;font-size:10.5px;color:var(--muted);font-family:var(--f-mono)}
+.bar-row{display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;align-items:center;font-size:10.5px;color:var(--muted);font-family:var(--f-mono)}
 .bar{display:flex;height:20px;border-radius:3px;overflow:hidden}
-.bar i{min-width:2px;cursor:pointer}
+.bar i{flex:1;min-width:2px;cursor:pointer}
+.bar-names{display:flex}
+.bar-names span{flex:1;text-align:center;font-size:10px;color:var(--dim)}
 .bar i:hover{outline:1px solid #fff;outline-offset:-1px}
 
 /* filmstrip */
@@ -328,6 +333,10 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
 @media (max-width:1100px){
   .app{grid-template-columns:220px minmax(0,1fr) 270px}
 }
+/* Left panel hidden: the photo takes its space */
+.app.no-left .left{display:none}
+@media (min-width:901px){.app.no-left{grid-template-columns:minmax(0,1fr) 296px;grid-template-areas:"top top" "stage right" "cmp right" "bar right" "film right"}}
+@media (min-width:901px) and (max-width:1100px){.app.no-left{grid-template-columns:minmax(0,1fr) 270px}}
 @media (max-width:900px){
   html,body{height:auto}
   .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;
@@ -351,6 +360,7 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
         <button class="btn ghost" id="btnUndo" type="button" title="Undo (Ctrl/Cmd + Z)" disabled>Undo</button>
         <button class="btn ghost" id="btnRedo" type="button" title="Redo (Ctrl/Cmd + Shift + Z)" disabled>Redo</button>
       </div>
+      <button class="btn ghost" id="btnLeft" type="button" title="Hide or show the left panel ( [ )">Hide left panel</button>
       <label class="btn" for="fileIn">Import photos</label>
       <input type="file" id="fileIn" multiple accept="image/*" hidden>
       <button class="btn ghost" id="btnBefore" type="button" title="Hold to see the original. Shortcut: hold \">Hold for before</button>
@@ -376,7 +386,8 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
           <button class="btn small" id="btnPaste" type="button" title="Ctrl/Cmd + Shift + V">Paste settings</button>
           <button class="btn small" id="btnSync" type="button" title="Give the selected photos this photo’s look. Each keeps its own pregrade.">Match selected</button>
           <button class="btn small" id="btnVariant" type="button" title="A second version of the same file with its own edits (Ctrl/Cmd + ')">Make a variant</button>
-          <button class="btn small" id="btnRef" type="button" title="The photo the others are measured and matched against (R)">Set reference</button>
+          <button class="btn small" id="btnRef" type="button" title="The photo the others are measured and matched against (R). Add a night reference too and each photo follows whichever is closer.">Set reference</button>
+          <button class="btn small" id="btnRefNight" type="button" title="A second reference for night or low-light shots (Shift + R). Each photo follows whichever reference is closer.">Set night ref</button>
           <button class="btn small" id="btnRemove" type="button" title="Delete or Backspace. Ctrl/Cmd + Z brings them back.">Delete</button>
         </div>
         <div class="btn-row">
@@ -429,15 +440,16 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
   <section class="grid" id="grid" aria-label="Library grid"><div class="grid-track" id="gridTrack"></div><div class="grid-empty" id="gridEmpty" hidden></div></section>
 
   <section class="cmp" id="cmp" aria-label="Colour check">
-    <div>
-      <h3>Your colours, closest match in this photo</h3>
+    <div class="cmp-cards">
+      <h3>Your colours, closest match in this photo <button class="linkbtn" id="cardsHide" type="button">Hide</button></h3>
       <div class="cards" id="cmpCards"></div>
     </div>
     <div>
-      <h3>Photo palette</h3>
+      <h3>Tones, darkest to lightest <button class="linkbtn" id="cardsShow" type="button">Show your colours</button></h3>
       <div class="bars">
-        <div class="bar-row"><span>before</span><div class="bar" id="barBefore"></div></div>
-        <div class="bar-row"><span>after</span><div class="bar" id="barAfter"></div></div>
+        <div class="bar-row"><span id="barBeforeLbl">before</span><div class="bar" id="barBefore"></div></div>
+        <div class="bar-row"><span id="barAfterLbl">after</span><div class="bar" id="barAfter"></div></div>
+        <div class="bar-row"><span></span><div class="bar-names"><span>blacks</span><span>shadows</span><span>mids</span><span>highlights</span><span>whites</span></div></div>
       </div>
     </div>
   </section>
@@ -532,10 +544,11 @@ select,.dlg input[type=text]{height:32px;border-radius:6px;border:1px solid var(
       <dt>Enter · Esc</dt><dd>Open the photo from the grid · back to loupe</dd>
       <dt>Z · + · −</dt><dd>Fit or 100%, zoom in, zoom out</dd>
       <dt>\ (hold)</dt><dd>See the original</dd>
+      <dt>[</dt><dd>Hide or show the left panel</dd>
       <h3>Choosing selects</h3>
       <dt>1 – 5 · 0</dt><dd>Star rating, or clear it</dd>
       <dt>P · X · U</dt><dd>Pick, reject, unflag</dd>
-      <dt>R</dt><dd>Set or clear the reference photo</dd>
+      <dt>R · Shift R</dt><dd>Set or clear the reference, or the night reference</dd>
       <h3>Editing</h3>
       <dt>Ctrl/Cmd Z</dt><dd>Undo, including deletes (Shift for redo)</dd>
       <dt>Ctrl/Cmd Shift C · V</dt><dd>Copy and paste a look</dd>
@@ -795,9 +808,27 @@ const state = {
   showCmp: prefs.get('showCmp', true),
   clip: null, palette: null, lutQuery: '', lutOpen: new Set(),
   view: prefs.get('view', 'loupe'), filter: { flag: 'any', stars: 0, edit: 'any', ...prefs.get('filter', {}) }, sort: prefs.get('sort', 'order'),
-  refId: prefs.get('refId', null), showCoh: prefs.get('showCoh', true), autoAdvance: prefs.get('autoAdvance', false),
+  refs: { day: null, night: null, ...prefs.get('refs', { day: prefs.get('refId', null) }) }, showCoh: prefs.get('showCoh', true), autoAdvance: prefs.get('autoAdvance', false), hideLeft: prefs.get('hideLeft', false), hideCards: prefs.get('hideCards', false),
   thumbSize: prefs.get('thumbSize', 190), pair: [], cells: [],
 };
+// Up to two references, day and night. Each photo is scored and matched against the one it sits closer to (by the
+// same measure as cohesion), unless it has been pinned to one from the right-click menu (p.refSlot).
+const REF_SLOTS = ['day', 'night'];
+const refPhoto = slot => byId(state.refs[slot]);
+const refSlotOf = p => (p && REF_SLOTS.find(k => state.refs[k] === p.id)) || null;
+const anyRef = () => REF_SLOTS.some(k => refPhoto(k));
+const bothRefs = () => REF_SLOTS.every(k => refPhoto(k));
+const refName = slot => refPhoto('night') ? (slot === 'day' ? 'Day reference' : 'Night reference') : 'Reference';
+function refSlotFor(p) {
+  if (!p || refSlotOf(p)) return null;
+  const set = REF_SLOTS.filter(k => refPhoto(k));
+  if (set.length < 2) return set[0] || null;
+  if (set.includes(p.refSlot)) return p.refSlot;
+  const d = refPhoto('day').stats, n = refPhoto('night').stats;
+  if (!p.stats || !d || !n) return 'day';
+  return cohScore(p.stats, d).score >= cohScore(p.stats, n).score ? 'day' : 'night';
+}
+const refFor = p => { const k = refSlotFor(p); return k ? refPhoto(k) : null; };
 const byId = id => state.photos.find(p => p.id === id);
 const active = () => byId(state.activeId);
 const selectedPhotos = () => visiblePhotos().filter(p => state.selected.has(p.id));
@@ -1006,12 +1037,18 @@ void main(){
     e = mix(e, vec3(0.015), clamp(0.5 + sd/u_px, 0., 1.));
   }
   if(u_grain > 0.){
+    // Each layer of grain is softened by how many of its cells fit in one output pixel, the way scaling a photo down
+    // averages grain out. Finer layers (and the blocky roughness) soften sooner, so a small photo and an HD one shown
+    // at the same size carry the same grain, and the preview matches the export. Box-averaging n × n cells leaves
+    // 1/(0.8n) of smooth noise and 1/(1.07n) of blocky noise (measured by simulation); below one cell per pixel the
+    // sample stands as it is, since a later downscale does the averaging.
     vec2 p = img*u_fullRes/u_grainCell + u_seed*vec2(13.71, 71.37);
-    float n = vnoise(p)*0.7 + vnoise(p*2.17+vec2(5.2,1.3))*0.45;
-    n = mix(n, hash12(floor(p*1.9))*2.-1., u_grainRough*0.6);
-    vec3 nc = vec3(n) + 0.22*vec3(vnoise(p*1.3+31.), vnoise(p*1.3+57.), vnoise(p*1.3+91.));
+    float F = u_grainFoot, Fv = F*0.8;
+    float n = vnoise(p)*0.7/max(1., Fv) + vnoise(p*2.17+vec2(5.2,1.3))*0.45/max(1., Fv*2.17);
+    n = mix(n, (hash12(floor(p*1.9))*2.-1.)/max(1., F*1.07*1.9), u_grainRough*0.6);
+    vec3 nc = vec3(n) + 0.22/max(1., Fv*1.3)*vec3(vnoise(p*1.3+31.), vnoise(p*1.3+57.), vnoise(p*1.3+91.));
     float Lw = clamp(dot(clamp(e,0.,1.), LW), 0., 1.);
-    e += nc*(0.3 + 2.8*Lw*(1.-Lw))*u_grain*0.16/max(1., u_grainFoot);
+    e += nc*(0.3 + 2.8*Lw*(1.-Lw))*u_grain*0.128;   // 0.128 keeps the fit-view look the presets were tuned on
   }
   if(u_dust + u_hairs + u_scratch > 0.){   // debris on the film or scanner glass sits on top of everything
     float m = 0.;
@@ -1268,11 +1305,11 @@ const nextOrder = () => state.photos.reduce((m, p) => Math.max(m, p.order), -1) 
 function newPhoto(rec) {
   return { id: rec.id || uid(), name: rec.name || 'Untitled', blob: rec.blob, settings: { ...DEFAULTS, ...(rec.settings || {}) },
     seed: rec.seed || (1 + Math.floor(Math.random() * 900)), sample: !!rec.sample, w: 0, h: 0, ready: false,
-    rating: rec.rating || 0, flag: rec.flag || 0, variantOf: rec.variantOf || null, vnum: rec.vnum || 0, order: rec.order ?? nextOrder(),
+    rating: rec.rating || 0, flag: rec.flag || 0, variantOf: rec.variantOf || null, vnum: rec.vnum || 0, order: rec.order ?? nextOrder(), refSlot: rec.refSlot || null,
     stats: null, coh: null,
     thumb: null, thumbTex: null, previewTex: null, pw: 0, ph: 0, fullTex: null, fw: 0, fh: 0, el: null, cv: null, gel: null, gcv: null };
 }
-const recordOf = p => ({ id: p.id, name: p.name, blob: p.blob, settings: { ...p.settings }, seed: p.seed, sample: p.sample, rating: p.rating, flag: p.flag, variantOf: p.variantOf, vnum: p.vnum, order: p.order });
+const recordOf = p => ({ id: p.id, name: p.name, blob: p.blob, settings: { ...p.settings }, seed: p.seed, sample: p.sample, rating: p.rating, flag: p.flag, variantOf: p.variantOf, vnum: p.vnum, order: p.order, refSlot: p.refSlot });
 function addPhotos(recs, { persist = true } = {}) {
   const added = [];
   for (const r of recs) { const p = newPhoto(r); state.photos.push(p); added.push(p); buildFrame(p); if (persist) persistSoon(p); }
@@ -1351,7 +1388,7 @@ function removePhotos(ids, quiet) {
     if (fullFor === p) fullFor = null;
     DB.del('photos', id);
   }
-  if (gone.has(state.refId)) setRef(null, true);
+  REF_SLOTS.forEach(k => { if (gone.has(state.refs[k])) setRef(k, null, true); });
   for (const p of state.photos) {   // an original left without its variants goes back to being a plain photo
     if (p.vnum === 1 && !p.variantOf && !state.photos.some(q => q.variantOf === p.id)) { p.vnum = 0; persistSoon(p); p.el.querySelector('em').textContent = displayName(p); p.gel.querySelector('.nm').textContent = displayName(p); updateBadges(p); }
   }
@@ -1488,7 +1525,7 @@ function drawCellLabels(force) {
   const box = $('#cells'), multi = state.cells.length > 1;
   $('#stageInfo').hidden = multi;
   const dpr = canvas.width / Math.max(1, canvas.getBoundingClientRect().width);
-  const key = multi ? state.cells.map(c => [c.p.id, c.x, c.y, c.w, c.h, c.bypass, c.p.rating, c.p.flag, c.p.coh?.score | 0, c.p === active(), state.before, state.refId === c.p.id].join()).join('|') + state.showCoh : '';
+  const key = multi ? state.cells.map(c => [c.p.id, c.x, c.y, c.w, c.h, c.bypass, c.p.rating, c.p.flag, c.p.coh?.score | 0, c.p === active(), state.before, refSlotOf(c.p), refPhoto('night')?.id].join()).join('|') + state.showCoh : '';
   if (!force && key === cellsKey) return;
   cellsKey = key; box.innerHTML = '';
   if (!multi) return;
@@ -1497,7 +1534,7 @@ function drawCellLabels(force) {
     el.className = 'cellbox' + (!c.label && p === active() ? ' on' : '');
     Object.assign(el.style, { left: c.x / dpr + 'px', top: c.y / dpr + 'px', width: c.w / dpr + 'px', height: c.h / dpr + 'px' });
     const tags = c.label ? `<span class="tag${c.bypass ? ' before' : ''}">${c.label}</span>` :
-      `<span class="tag">${esc(displayName(p))}</span>` + (p.id === state.refId ? '<span class="tag before">Reference</span>' : '') +
+      `<span class="tag">${esc(displayName(p))}</span>` + (refSlotOf(p) ? `<span class="tag before">${refName(refSlotOf(p))}</span>` : '') +
       (p.rating ? `<span class="tag" style="color:var(--edge)">${'★'.repeat(p.rating)}</span>` : '') + (state.showCoh && p.coh ? `<span class="tag">Cohesion ${Math.round(p.coh.score)}</span>` : '') +
       (state.before ? '<span class="tag before">Before</span>' : '');
     const acts = c.label ? '' : `<button class="btn small${p.flag === 1 ? ' picked' : ''}" type="button" data-cflag="1" data-id="${p.id}" title="Pick (P)">${p.flag === 1 ? '✓ Picked' : 'Pick'}</button><button class="btn small${p.flag === -1 ? ' rejected' : ''}" type="button" data-cflag="-1" data-id="${p.id}" title="Reject (X)">${p.flag === -1 ? '✕ Rejected' : 'Reject'}</button>` +
@@ -1576,14 +1613,12 @@ function cohScore(st, ref) {
 }
 const cohClass = s => s >= 85 ? 'ok' : s >= 70 ? 'warn' : 'far';
 const cohWord = s => s >= 85 ? 'Cohesive' : s >= 70 ? 'Close' : 'Outlier';
-function cohesionBase() {
-  const ref = byId(state.refId);
-  if (ref?.stats) return { stats: ref.stats, ref };
+function libraryAverage() {
   const st = visiblePhotos().map(p => p.stats).filter(Boolean);
   if (st.length < 2) return null;
   const avg = k => st.reduce((s, x) => s + x[k], 0) / st.length;
   const pal = st.flatMap(x => (x.pal || []).map(c => ({ ...c, share: c.share / st.length })));
-  return { stats: { L: avg('L'), sd: avg('sd'), a: avg('a'), b: avg('b'), C: avg('C'), pal }, ref: null };
+  return { L: avg('L'), sd: avg('sd'), a: avg('a'), b: avg('b'), C: avg('C'), pal };
 }
 const statsQueue = new Set(); let statsTimer = 0, cohTimer = 0;
 function queueStats(ps) { ps.forEach(p => statsQueue.add(p.id)); clearTimeout(statsTimer); statsTimer = setTimeout(runStats, 400); }
@@ -1594,14 +1629,14 @@ function runStats() {
 }
 function scheduleCohesion() { clearTimeout(cohTimer); cohTimer = setTimeout(refreshCohesion, 120); }
 function refreshCohesion() {
-  const base = cohesionBase();
-  for (const p of state.photos) p.coh = base && p.stats && p !== base.ref ? cohScore(p.stats, base.stats) : null;
+  const refd = anyRef(), avg = refd ? null : libraryAverage();
+  for (const p of state.photos) { const base = refd ? refFor(p)?.stats : avg; p.coh = base && p.stats && !refSlotOf(p) ? cohScore(p.stats, base) : null; }
   state.photos.forEach(updateBadges);
   const scored = visiblePhotos().filter(p => p.coh), sum = $('#cohSum');
-  sum.hidden = scored.length < (base?.ref ? 1 : 2);
+  sum.hidden = scored.length < (refd ? 1 : 2);
   if (!sum.hidden) {
     const avg = Math.round(scored.reduce((s, p) => s + p.coh.score, 0) / scored.length), out = scored.filter(p => p.coh.score < 70).length;
-    sum.innerHTML = `${base.ref ? 'Against reference' : 'Library'} cohesion <b class="${cohClass(avg)}" style="color:var(--${cohClass(avg) === 'far' ? 'safelight' : cohClass(avg)})">${avg}</b>` + (out ? ` · ${plural(out, 'outlier')}` : '');
+    sum.innerHTML = `${refd ? (bothRefs() ? 'Against references' : 'Against reference') : 'Library'} cohesion <b class="${cohClass(avg)}" style="color:var(--${cohClass(avg) === 'far' ? 'safelight' : cohClass(avg)})">${avg}</b>` + (out ? ` · ${plural(out, 'outlier')}` : '');
   }
   if (state.sort === 'coh') restripe();
   renderRefInfo(); refreshStageInfo(); drawCellLabels();
@@ -1686,7 +1721,7 @@ function buildFrame(p) {
 function updateBadges(p) {
   if (!p.el) return;
   const flag = p.flag === 1 ? '<span class="bdg pick" title="Pick">✓</span>' : p.flag === -1 ? '<span class="bdg rej" title="Rejected">✕</span>' : '';
-  const b = (p.id === state.refId ? '<span class="bdg ref" title="Reference photo">Ref</span>' : '') + flag + (p.vnum ? `<span class="bdg" title="Variant ${p.vnum}">v${p.vnum}</span>` : '');
+  const rs = refSlotOf(p), b = (rs ? `<span class="bdg ref" title="${refName(rs)} photo">${refPhoto('night') ? (rs === 'day' ? 'Day' : 'Night') : 'Ref'}</span>` : '') + flag + (p.vnum ? `<span class="bdg" title="Variant ${p.vnum}">v${p.vnum}</span>` : '');
   const s = p.coh && state.showCoh ? Math.round(p.coh.score) : null;
   const coh = s == null ? '' : `<span class="bdg ${cohClass(s)}" title="Cohesion ${s} of 100: ${cohWord(s).toLowerCase()}">${s}</span>`;
   p.el.querySelector('.badges').innerHTML = b; p.el.querySelector('.bcoh').innerHTML = coh;
@@ -1720,8 +1755,10 @@ function refreshLibraryUI() {
   $('#selInfo').textContent = !total ? 'No photos yet.' : `${plural(total, 'photo')} in the library, ${n} selected. Editing ${scopeText()}.`;
   refreshScopeUI();
   $('#btnSync').disabled = n < 2; $('#btnPaste').disabled = !state.clip || !n; $('#btnRemove').disabled = !n;
-  $('#btnVariant').disabled = !n; $('#btnRef').disabled = !active();
-  $('#btnRef').textContent = state.refId && state.refId === state.activeId ? 'Clear reference' : 'Set reference';
+  $('#btnVariant').disabled = !n; $('#btnRef').disabled = $('#btnRefNight').disabled = !active();
+  const rs = refSlotOf(active());
+  $('#btnRef').textContent = rs === 'day' ? (refPhoto('night') ? 'Clear day ref' : 'Clear reference') : refPhoto('night') ? 'Set day ref' : 'Set reference';
+  $('#btnRefNight').textContent = rs === 'night' ? 'Clear night ref' : 'Set night ref';
   document.querySelectorAll('#viewSeg [data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === state.view));
 }
 function setActive(id, { keepSelection = false } = {}) {
@@ -1769,7 +1806,7 @@ function refreshStageInfo() {
   if (!p) { box.innerHTML = ''; return; }
   const stock = lutName(p.settings.stock) || 'No film';
   box.innerHTML = `<span class="tag">${esc(displayName(p))}</span>` + (p.w ? `<span class="tag">${p.w}×${p.h}</span>` : '') +
-    `<span class="tag">${esc(stock)}</span>` + (p.id === state.refId ? '<span class="tag before">Reference</span>' : '') +
+    `<span class="tag">${esc(stock)}</span>` + (refSlotOf(p) ? `<span class="tag before">${refName(refSlotOf(p))}</span>` : '') +
     (p.rating ? `<span class="tag" style="color:var(--edge)">${'★'.repeat(p.rating)}</span>` : '') + (p.flag ? `<span class="tag">${p.flag > 0 ? '✓ Pick' : '✕ Rejected'}</span>` : '') + (p.sim ? `<span class="tag">Look-alike set ${p.sim} of ${p.simN}</span>` : '') +
     (state.showCoh && p.coh ? `<span class="tag">Cohesion ${Math.round(p.coh.score)}</span>` : '') +
     (targets().length > 1 ? `<span class="tag many">Editing ${targets().length} photos</span>` : '') + (state.zoom !== 'fit' ? `<span class="tag">${zoomPct()}</span>` : '') + (state.before ? '<span class="tag before">Before</span>' : '');
@@ -1821,14 +1858,25 @@ function step(dir) {
   const i = vis.findIndex(p => p.id === state.activeId), j = clamp(i + dir, 0, vis.length - 1);
   if (vis[j] && j !== i) setActive(vis[j].id);
 }
-function setRef(id, quiet) {
-  const was = state.refId; state.refId = id || null; prefs.set('refId', state.refId);
-  [byId(was), byId(id)].forEach(p => p && updateBadges(p));
+function setRef(slot, id, quiet) {
+  const name = refName(slot);
+  if (id) REF_SLOTS.forEach(k => { if (state.refs[k] === id) state.refs[k] = null; });   // one photo, one reference at most
+  state.refs[slot] = id || null; prefs.set('refs', state.refs);
   if (id) { const p = byId(id); if (p && !p.stats && p.thumb) p.stats = measure(p); }
-  refreshLibraryUI(); refreshCohesion();
-  if (!quiet) toast(id ? 'Reference set. Every photo is now scored against it; use Match reference in Pregrade to pull others in line.' : 'Reference cleared. Scores are now against the library average.', 5000);
+  refreshLibraryUI(); refreshCohesion(); schedulePalette(); requestDraw();
+  if (quiet) return;
+  if (!id) toast(`${name} cleared.` + (anyRef() ? '' : ' Scores are now against the library average.'), 5000);
+  else if (bothRefs()) toast(`${refName(slot)} set. Each photo is scored and matched against whichever reference it sits closer to; right-click a photo to pin it to one.`, 6000);
+  else toast(`${refName(slot)} set. Every photo is now scored against it; use Match reference in Pregrade to pull others in line.`, 5000);
 }
-$('#btnRef').onclick = () => { const p = active(); if (p) setRef(state.refId === p.id ? null : p.id); };
+const toggleRef = (slot, p) => p && setRef(slot, state.refs[slot] === p.id ? null : p.id);
+function pinRef(ps, slot) {
+  ps.forEach(p => { p.refSlot = slot || null; persistSoon(p); });
+  refreshCohesion(); schedulePalette();
+  toast(slot ? `${plural(ps.length, 'photo')} now follow${ps.length === 1 ? 's' : ''} the ${slot} reference` : `${plural(ps.length, 'photo')} back to the closer reference`);
+}
+$('#btnRef').onclick = () => toggleRef('day', active());
+$('#btnRefNight').onclick = () => toggleRef('night', active());
 // A variant is a second copy of the same file with its own edits. It sits next to the original and exports as its own file.
 function makeVariants(ps) {
   ps = ps.filter(Boolean); if (!ps.length) return;
@@ -1920,6 +1968,7 @@ function buildPanels() {
     if (e.target.closest('[data-shuffle]')) { applySetting('texSeed', 2 + Math.floor(Math.random() * 9997)); return; }
     if (e.target.closest('[data-normalise]')) { normaliseTargets(targets(), e.target.closest('[data-normalise]').dataset.normalise); return; }
     if (e.target.closest('[data-matchref]')) { matchTargets(); return; }
+    const rp = e.target.closest('[data-refpin]'); if (rp) { pinRef([active()].filter(Boolean), rp.dataset.refpin); return; }
     if (e.target.closest('[data-clearbase]')) { const ts = targets(); applyPerPhoto(ts, () => Object.fromEntries(BASE_KEYS.map(k => [k, DEFAULTS[k]])), 'clear pregrade'); toast(`Pregrade cleared on ${plural(ts.length, 'photo')}`); return; }
     if (e.target.closest('[data-today]')) { const d = new Date(); const t = `'${String(d.getFullYear()).slice(2)} ${d.getMonth() + 1} ${d.getDate()}`; applySetting('dateText', t); syncControls(); return; }
     const rg = e.target.closest('[data-rmgroup]');
@@ -2207,29 +2256,30 @@ function matchToRef(p, ref) {
   return { bExposure: Math.round(x[0] * 100) / 100, bTemp: Math.round(x[1]), bTint: Math.round(x[2]), bSat: Math.round(x[3]) };
 }
 async function matchTargets(ps = targets()) {
-  const ref = byId(state.refId);
-  if (!ref) { toast('Set a reference photo first: right-click a photo and choose Set as reference, or press R.', 5000); return; }
-  const ts = ps.filter(p => p.ready && p !== ref);
-  if (!ts.length) { toast('That’s the reference itself. Choose another photo, or set the scope to Selected or All.'); return; }
-  await Promise.all([ref, ...ts].map(p => ensureLut(p.settings.stock)));
-  ref.stats = measure(ref);
+  if (!anyRef()) { toast('Set a reference photo first: right-click a photo and choose Set as reference, or press R.', 5000); return; }
+  const pairs = ps.filter(p => p.ready).map(p => [p, refFor(p)]).filter(x => x[1]);
+  if (!pairs.length) { toast('That’s a reference itself. Choose another photo, or set the scope to Selected or All.'); return; }
+  const refs = [...new Set(pairs.map(x => x[1]))];
+  await Promise.all([...refs, ...pairs.map(x => x[0])].map(p => ensureLut(p.settings.stock)));
+  refs.forEach(r => { r.stats = measure(r); });
   const results = new Map();
-  for (let i = 0; i < ts.length; i++) {
-    setBusy(`Matching ${i + 1} of ${ts.length}…`); await new Promise(r => setTimeout(r, 0));
-    results.set(ts[i].id, matchToRef(ts[i], ref.stats));
+  for (let i = 0; i < pairs.length; i++) {
+    setBusy(`Matching ${i + 1} of ${pairs.length}…`); await new Promise(r => setTimeout(r, 0));
+    results.set(pairs[i][0].id, matchToRef(pairs[i][0], pairs[i][1].stats));
   }
   setBusy(null);
-  applyPerPhoto(ts, p => results.get(p.id), 'match reference');
-  toast(`Matched ${plural(ts.length, 'photo')} to the reference. Ctrl/Cmd + Z to undo.`);
+  applyPerPhoto(pairs.map(x => x[0]), p => results.get(p.id), 'match reference');
+  toast(`Matched ${plural(pairs.length, 'photo')} to ${refs.length > 1 ? 'their references' : `the ${refName(refSlotOf(refs[0])).toLowerCase()}`}. Ctrl/Cmd + Z to undo.`);
 }
 function renderRefInfo() {
   const box = $('#refInfo'); if (!box) return;
-  const p = active(), ref = byId(state.refId);
-  const btn = document.querySelector('[data-matchref]'); if (btn) btn.disabled = !ref;
+  const p = active(), slot = refSlotFor(p), ref = slot ? refPhoto(slot) : null, own = refSlotOf(p);
+  const btn = document.querySelector('[data-matchref]'); if (btn) btn.disabled = !anyRef();
   if (!p) { box.innerHTML = '<span class="hint">Open a photo.</span>'; return; }
-  if (p === ref) { box.innerHTML = '<span><b>This is the reference photo.</b></span><span class="hint">Every other photo is scored against it. Press R to clear it.</span>'; return; }
-  const c = p.coh;
-  const head = ref ? 'Against the reference' : 'Against the library average';
+  if (own) { box.innerHTML = `<span><b>This is the ${refName(own).toLowerCase()} photo.</b></span><span class="hint">${bothRefs() ? 'Each photo is scored against whichever reference it sits closer to.' : 'Every other photo is scored against it.'} Press ${own === 'day' ? 'R' : 'Shift R'} to clear it.</span>`; return; }
+  const c = p.coh, other = slot === 'day' ? 'night' : 'day';
+  const head = (ref ? `Against the ${refName(slot).toLowerCase()}` : 'Against the library average') +
+    (bothRefs() ? (p.refSlot ? ' (pinned) · <button class="linkbtn" data-refpin="">auto</button>' : ' (closer)') + ` · <button class="linkbtn" data-refpin="${other}">use ${other}</button>` : '');
   if (!c) { box.innerHTML = `<span class="hint">${ref ? 'Measuring…' : 'No reference yet. Right-click your best photo and choose Set as reference (or press R) to score and match the rest against it.'}</span>`; return; }
   const s = Math.round(c.score), stops = c.dL / 17;
   const rows = [];
@@ -2487,6 +2537,10 @@ $('#swAdd').onclick = () => { let v = $('#swHex').value.trim(); if (v[0] !== '#'
 $('#swHex').addEventListener('keydown', e => { if (e.key === 'Enter') $('#swAdd').click(); });
 $('#swBrand').onclick = () => { state.swatches = BRAND.map(s => ({ ...s })); saveSwatches(); };
 $('#cmpShow').checked = state.showCmp;
+function setCardsHidden(on) { state.hideCards = on; prefs.set('hideCards', on); $('#cmp').classList.toggle('no-cards', on); }
+$('#cardsHide').onclick = () => setCardsHidden(true);
+$('#cardsShow').onclick = () => setCardsHidden(false);
+setCardsHidden(state.hideCards);
 $('#cmpShow').addEventListener('change', e => { state.showCmp = e.target.checked; prefs.set('showCmp', state.showCmp); $('#cmp').hidden = !state.showCmp; requestDraw(); schedulePalette(); });
 $('#swEyedrop').onclick = () => setPicking(!state.picking);
 function setPicking(on) { state.picking = on; $('#swEyedrop').setAttribute('aria-pressed', on); updateStageCursor(); if (!on) $('#loupe').hidden = true; else toast('Click the photo to add that colour. Esc to stop.'); }
@@ -2501,6 +2555,27 @@ $('#swFromImg').addEventListener('change', async e => {
   } catch { toast('Couldn’t read that image'); }
 });
 
+// Tonal anchors: the average colour of each part of the tonal range, by share of pixels (darkest 5%, next 20%,
+// middle half, next 20%, lightest 5%), so two photos line up slot for slot whatever is in the frame.
+const TONES = [['Blacks', 0, 0.05], ['Shadows', 0.05, 0.25], ['Mids', 0.25, 0.75], ['Highlights', 0.75, 0.95], ['Whites', 0.95, 1]];
+function tonalAnchors(px) {
+  const pts = []; for (let i = 0; i < px.length; i += 4) { const rgb = [px[i], px[i + 1], px[i + 2]]; pts.push({ rgb, lab: rgbToLab(rgb) }); }
+  if (!pts.length) return [];
+  pts.sort((a, b) => a.lab[0] - b.lab[0]);
+  return TONES.map(([name, a, b]) => {
+    const i0 = Math.min(pts.length - 1, Math.floor(a * pts.length)), i1 = Math.max(i0 + 1, Math.round(b * pts.length)), rgb = [0, 0, 0];
+    for (let i = i0; i < i1; i++) for (let c = 0; c < 3; c++) rgb[c] += pts[i].rgb[c];
+    rgb.forEach((v, c) => { rgb[c] = v / (i1 - i0); });
+    return { name, rgb, lab: rgbToLab(rgb) };
+  });
+}
+function toneNote(t, vs) {   // "lighter, warmer" for t against the same slot of vs
+  const dL = t.lab[0] - vs.lab[0], da = t.lab[1] - vs.lab[1], db = t.lab[2] - vs.lab[2], bits = [];
+  if (Math.abs(dL) >= 3) bits.push(dL > 0 ? 'lighter' : 'darker');
+  if (Math.abs(db) >= 3) bits.push(db > 0 ? 'warmer' : 'cooler');
+  if (Math.abs(da) >= 3) bits.push(da > 0 ? 'more magenta' : 'greener');
+  return bits.length ? bits.join(', ') : 'close';
+}
 function kmeans(px, k) {
   const pts = []; for (let i = 0; i < px.length; i += 4) { const rgb = [px[i], px[i + 1], px[i + 2]]; pts.push({ rgb, lab: rgbToLab(rgb) }); }
   if (!pts.length) return [];
@@ -2536,12 +2611,18 @@ function schedulePalette() { clearTimeout(palTimer); palTimer = setTimeout(compu
 function computePalette() {
   const p = active();
   if (!p || !p.ready || !state.showCmp) { state.palette = null; renderCompare(); return; }
-  let tex = p.previewTex, tw = p.pw, th = p.ph; if (!tex) { tex = p.thumbTex || (p.thumbTex = texFromImage(p.thumb)); tw = p.thumb.width; th = p.thumb.height; }
-  const sc = 96 / Math.max(p.w, p.h), w = Math.max(1, Math.round(p.w * sc)), h = Math.max(1, Math.round(p.h * sc));
+  const small = (q, extra) => {
+    let tex = q.previewTex, tw = q.pw, th = q.ph; if (!tex) { tex = q.thumbTex || (q.thumbTex = texFromImage(q.thumb)); tw = q.thumb.width; th = q.thumb.height; }
+    const sc = 96 / Math.max(q.w, q.h);
+    return renderToPixels(q, tex, tw, th, Math.max(1, Math.round(q.w * sc)), Math.max(1, Math.round(q.h * sc)), extra);
+  };
   const toPix = px => { const a = []; for (let i = 0; i < px.length; i += 4) { const rgb = [px[i], px[i + 1], px[i + 2]]; a.push({ rgb, lab: rgbToLab(rgb) }); } return a; };
-  const before = renderToPixels(p, tex, tw, th, w, h, { bypass: true });
-  const after = renderToPixels(p, tex, tw, th, w, h, { dither: 0 });
-  state.palette = { before: kmeans(before, 6), after: kmeans(after, 6), pixB: toPix(before), pixA: toPix(after) };
+  const before = small(p, { bypass: true }), after = small(p, { dither: 0 });
+  // With a reference set, the palette compares the graded reference with this photo instead of before and after.
+  const ref = refFor(p), withRef = ref && ref.ready && ref.thumb;
+  state.palette = { before: tonalAnchors(before), after: tonalAnchors(after), pixB: toPix(before), pixA: toPix(after),
+    ref: withRef ? tonalAnchors(small(ref, { dither: 0 })) : null, refName: withRef ? `${refName(refSlotOf(ref))}: ${displayName(ref)}` : '',
+    refLabel: withRef && bothRefs() ? `${refSlotOf(ref)} ref` : 'reference' };
   renderCompare();
 }
 function renderCompare() {
@@ -2560,8 +2641,11 @@ function renderCompare() {
       <em class="pill ${verdict[0]}">${verdict[1]}</em>`;
     cards.appendChild(el);
   }
-  const bar = (box, ks) => { box.innerHTML = ''; ks.forEach(k => { const i = document.createElement('i'); const hx = rgbToHex(k.rgb); i.style.background = hx; i.style.flex = k.share; i.title = `${hx} · ${(k.share * 100).toFixed(0)}% · click to add to your colours`; i.onclick = () => addSwatch(hx); box.appendChild(i); }); };
-  bar($('#barBefore'), pal.before); bar($('#barAfter'), pal.after);
+  const bar = (box, ts, vs, vsName) => { box.innerHTML = ''; ts.forEach((t, j) => { const i = document.createElement('i'); const hx = rgbToHex(t.rgb); i.style.background = hx; i.title = `${t.name} ${hx}` + (vs ? ` · ${toneNote(t, vs[j])} than ${vsName}` : '') + ' · click to add to your colours'; i.onclick = () => addSwatch(hx); box.appendChild(i); }); };
+  $('#barBeforeLbl').textContent = pal.ref ? pal.refLabel : 'before';
+  $('#barAfterLbl').textContent = pal.ref ? 'this photo' : 'after';
+  $('#barBeforeLbl').title = pal.ref ? pal.refName : 'This photo ungraded';
+  bar($('#barBefore'), pal.ref || pal.before); bar($('#barAfter'), pal.after, pal.ref || pal.before, pal.ref ? 'the reference' : 'before');
 }
 
 /* ---------------- stage interaction ---------------- */
@@ -2725,17 +2809,26 @@ window.addEventListener('keydown', e => {
   if (k === 'p') { setFlag(cullTargets(), 1); return; }
   if (k === 'x') { setFlag(cullTargets(), -1); return; }
   if (k === 'u') { setFlag(cullTargets(), 0, { noAdvance: true }); return; }
-  if (k === 'r') { $('#btnRef').click(); return; }
+  if (k === 'r') { toggleRef(e.shiftKey ? 'night' : 'day', active()); return; }
   if (k === 'g') { setView('grid'); return; }
   if (k === 'e') { setView('loupe'); return; }
   if (k === 'c') { setView('compare'); return; }
   if (k === 'n') { setView('survey'); return; }
   if (e.key === '?') { $('#keysDlg').showModal(); return; }
   if (k === 'z') { $('#btnZoom').click(); return; }
+  if (e.key === '[') { setLeftHidden(!state.hideLeft); return; }
   if (e.key === '=' || e.key === '+') { zoomStep(1); return; }
   if (e.key === '-' || e.key === '_') { zoomStep(-1); return; }
 });
 $('#btnKeys').onclick = () => $('#keysDlg').showModal();
+function setLeftHidden(on) {
+  state.hideLeft = on; prefs.set('hideLeft', on);
+  $('#app').classList.toggle('no-left', on);
+  $('#btnLeft').textContent = on ? 'Show left panel' : 'Hide left panel';
+  requestDraw();
+}
+$('#btnLeft').onclick = () => setLeftHidden(!state.hideLeft);
+setLeftHidden(state.hideLeft);
 
 /* ---------------- right-click menu (filmstrip, grid and the photo itself) ---------------- */
 const ctx = $('#ctx');
@@ -2743,7 +2836,7 @@ function closeMenu() { ctx.hidden = true; ctx.innerHTML = ''; }
 function openMenu(ev, id) {
   ev.preventDefault();
   if (!state.selected.has(id)) setActive(id);
-  const p = byId(id), sel = selectedPhotos(), ps = sel.includes(p) && sel.length > 1 ? sel : [p], n = ps.length, ref = byId(state.refId);
+  const p = byId(id), sel = selectedPhotos(), ps = sel.includes(p) && sel.length > 1 ? sel : [p], n = ps.length, ref = n === 1 ? refFor(p) : null, rs = refSlotOf(p);
   const many = n > 1 ? ` ${n} photos` : '';
   const items = [
     ['head', n > 1 ? `${n} photos selected` : displayName(p)],
@@ -2751,8 +2844,12 @@ function openMenu(ev, id) {
     ['Pick', 'P', () => setFlag(ps, 1, { noAdvance: true })], ['Reject', 'X', () => setFlag(ps, -1, { noAdvance: true })],
     ps.some(q => q.flag) && ['Clear flag', 'U', () => setFlag(ps, 0, { noAdvance: true })],
     '-',
-    n === 1 && [p.id === state.refId ? 'Clear reference' : 'Set as reference', 'R', () => setRef(p.id === state.refId ? null : p.id)],
-    n === 1 && ref && p !== ref && ['Compare with reference', '', () => { state.selected = new Set([p.id, ref.id]); state.pair = [ref.id, p.id]; setActive(p.id, { keepSelection: true }); setView('compare'); requestDraw(); }],
+    n === 1 && [rs === 'day' ? `Clear ${refName('day').toLowerCase()}` : refPhoto('night') ? 'Set as day reference' : 'Set as reference', 'R', () => toggleRef('day', p)],
+    n === 1 && [rs === 'night' ? 'Clear night reference' : 'Set as night reference', 'Shift R', () => toggleRef('night', p)],
+    bothRefs() && !ps.some(refSlotOf) && ['Follow the day reference' + (n === 1 && p.refSlot === 'day' ? ' ✓' : ''), '', () => pinRef(ps, 'day')],
+    bothRefs() && !ps.some(refSlotOf) && ['Follow the night reference' + (n === 1 && p.refSlot === 'night' ? ' ✓' : ''), '', () => pinRef(ps, 'night')],
+    bothRefs() && ps.some(q => q.refSlot) && ['Follow whichever is closer', '', () => pinRef(ps, null)],
+    ref && [`Compare with ${refName(refSlotOf(ref)).toLowerCase()}`, '', () => { state.selected = new Set([p.id, ref.id]); state.pair = [ref.id, p.id]; setActive(p.id, { keepSelection: true }); setView('compare'); requestDraw(); }],
     n === 2 && ['Compare these two', 'C', () => { state.pair = ps.map(q => q.id); setView('compare'); requestDraw(); }],
     n > 2 && ['Survey these', 'N', () => setView('survey')],
     n === 1 && p.sim && [`Survey its look-alikes (${p.simN})`, '', () => { const g = visiblePhotos().filter(q => q.sim === p.sim); state.selected = new Set(g.map(q => q.id)); setActive(p.id, { keepSelection: true }); setView(g.length === 2 ? 'compare' : 'survey'); requestDraw(); }],
@@ -2762,7 +2859,7 @@ function openMenu(ev, id) {
     n === 1 && ['Copy settings', '', () => { setActive(p.id); copySettings(); }],
     state.clip && [`Paste settings${many}`, '', () => applySettingsTo(ps, state.clip, `Pasted onto ${plural(n, 'photo')}`, 'paste')],
     ['Even out' + many, '', () => normaliseTargets(ps, 'even')],
-    ref && !(n === 1 && p === ref) && ['Match to reference' + many, '', () => matchTargets(ps)],
+    ps.some(refFor) && ['Match to reference' + many, '', () => matchTargets(ps)],
     ['Reset' + many, '', () => applySettingsTo(ps, {}, n > 1 ? `Reset ${n} photos` : 'Photo reset', 'reset', { keepBase: false })],
     ['Export' + many + '…', '', () => { state.selected = new Set(ps.map(q => q.id)); refreshLibraryUI(); $('#btnExport').click(); }],
     '-',
@@ -2883,7 +2980,7 @@ async function boot() {
     added[1].settings = { ...DEFAULTS, ...BUILTIN_PRESETS[0].s };
     added.forEach(persistSoon);
   }
-  if (state.refId && !byId(state.refId)) setRef(null, true);
+  REF_SLOTS.forEach(k => { if (state.refs[k] && !byId(state.refs[k])) setRef(k, null, true); });
   const vis = visiblePhotos();
   if (vis.length && !vis.includes(active())) setActive(vis[0].id); else if (state.activeId) setActive(state.activeId);
   restripe(); refreshLibraryUI(); syncControls(); renderRefInfo(); requestDraw();
